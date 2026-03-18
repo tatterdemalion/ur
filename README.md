@@ -29,7 +29,7 @@ For decades, the boards sat in the British Museum as beautiful but unplayable ar
 Because this project relies entirely on the Python Standard Library, there are **zero external dependencies**.
 
     # 1. Clone the repository
-    git clone https://github.com/yourusername/ur.git
+    git clone https://github.com/tatterdemalion/ur.git
 
     # 2. Navigate into the directory
     cd ur
