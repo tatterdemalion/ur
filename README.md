@@ -2,9 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> *Replace the link below with a path to your actual screenshot!*
-> 
-> ![Gameplay Screenshot](gameplay.png)
+![Gameplay Screenshot](gameplay.png)
 
 A gorgeous, dependency-free, terminal-based implementation of the oldest playable board game in recorded history. 
 
