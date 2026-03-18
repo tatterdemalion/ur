@@ -293,7 +293,7 @@ def play_game(bot: Bot, save: SaveFile = None):
 
 
 def show_tutorial():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    clear()
     print(f"{C_BOLD_TEXT}=== HOW TO PLAY THE ROYAL GAME OF UR ==={C_RESET}\n")
     print("1. Objective: Move all 7 of your pieces across the board to the end before your opponent.")
     print("2. Movement: You roll 4 binary dice each turn, yielding a move of 0 to 4 spaces.")
@@ -330,7 +330,7 @@ def _apply_board(engine: Engine, board: dict):
 
 def play_network_host():
     """Host a game: you are P1, the remote player is P2."""
-    os.system("clear")
+    clear()
     print(f"{C_BOLD_TEXT}=== HOST GAME ==={C_RESET}\n")
 
     lan_saves = [s for s in list_saves() if s.mode == "lan"]
@@ -463,7 +463,7 @@ def play_network_client(host_ip: str):
     """Join a game: you are P2, the host is P1."""
     client = Client(host_ip)
 
-    os.system("clear")
+    clear()
     print(f"{C_BOLD_TEXT}=== JOIN GAME ==={C_RESET}\n")
     print(f"Connecting to {host_ip}:{PORT}...")
     client.connect()
@@ -547,7 +547,7 @@ def _pick_local_save_menu() -> Optional[SaveFile]:
         time.sleep(1.5)
         return None
 
-    os.system('clear')
+    clear()
     print(f"{C_BOLD_TEXT}=== CONTINUE GAME ==={C_RESET}\n")
     for i, s in enumerate(saves, 1):
         print(f"  [{i}] {s}")
@@ -571,7 +571,7 @@ def _bot_by_name(name: str) -> Optional[Bot]:
 
 def main_menu():
     while True:
-        os.system('clear')
+        clear()
         print(f"{C_TEXT}=== THE ROYAL GAME OF UR ==={C_RESET}\n")
         print("  [1] Play vs Bot")
         print("  [2] Continue vs Bot")
@@ -597,7 +597,7 @@ def main_menu():
             elif choice == '3':
                 play_network_host()
             elif choice == '4':
-                os.system('clear')
+                clear()
                 print(f"{C_BOLD_TEXT}=== JOIN GAME ==={C_RESET}\n")
                 last_ip = _load_session().get("last_ip", "")
                 prompt = f"Enter host IP address [{last_ip}]: " if last_ip else "Enter host IP address: "
@@ -617,7 +617,7 @@ def main_menu():
 
 def select_bot_menu():
     while True:
-        os.system('clear')
+        clear()
         print(f"{C_BOLD_TEXT}=== SELECT OPPONENT ==={C_RESET}\n")
         print("  [1] RandomBot    (Easy - Moves completely randomly)")
         print("  [2] GreedyBot    (Medium - Always takes points or hits immediately)")
