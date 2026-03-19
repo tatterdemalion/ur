@@ -156,16 +156,24 @@ class BoardVisualizer:
                 # Base content is always exactly 1 visible character
                 content = " "
 
+                on_rosetta = False
                 if coord in ROSETTAS:
+                    on_rosetta = True
                     content = f"{C_ROSETTA}✿{C_BOARD}"
 
                 for piece in top.pieces:
                     if piece.is_available and piece.coord == coord:
-                        content = f"{C_P2}●{C_BOARD}"
+                        if on_rosetta:
+                            content = f"{C_ROSETTA}●{C_BOARD}"
+                        else:
+                            content = f"{C_P2}●{C_BOARD}"
 
                 for piece in bottom.pieces:
                     if piece.is_available and piece.coord == coord:
-                        content = f"{C_P1}{self._numbered_piece(piece)}{C_BOARD}"
+                        if on_rosetta:
+                            content = f"{C_ROSETTA}{self._numbered_piece(piece)}{C_BOARD}"
+                        else:
+                            content = f"{C_P1}{self._numbered_piece(piece)}{C_BOARD}"
 
                 # Uniformly pad the 1-character content to fit the 3-character walls
                 cells[chr(letter_code)] = f" {content} "
