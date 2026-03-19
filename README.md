@@ -21,7 +21,7 @@ For decades, the boards sat in the British Museum as beautiful but unplayable ar
 * **Slick Terminal UI:** A beautiful, responsive ANSI-colored interface featuring asynchronous dice rolling animations, intuitive move highlighting, and a static ASCII grid template.
 * **LAN Multiplayer:** Play across the room (or the world) using a custom, lightweight TCP protocol. Built on an authoritative-server model ensuring zero client-side desyncs.
 * **Smart Bots:** Play against the computer or pit AIs against each other. Includes a `RandomBot`, a `GreedyBot`, and a mathematically-driven `StrategicBot` that calculates risk probabilities.
-* **Robust Persistence:** Games auto-save after every turn with procedurally generated, historically thematic names (e.g., `Lapis_Ziggurat`, `Exiled_Scribe`). Disconnected from a LAN game? Just reload the save and keep playing.
+* **Robust Persistence:** Games auto-save after every turn with procedurally generated names (e.g., `Lapis_Ziggurat`, `Exiled_Scribe`). Disconnected from a LAN game? Just reload the save and keep playing.
 * **Simulation Engine:** A dedicated `simulate.py` runner to pit bots against each other over thousands of games, tracking win rates and average turns via precise dataclasses.
 
 ## 🚀 Quick Start
