@@ -34,50 +34,55 @@ TEMPLATE = """\
 ╚═══╩═══╩═══╩═══╝       ╚═══╩═══╝\
 """
 
-SESSION_FILE = os.path.join(os.path.dirname(__file__), "..", "session.json")
 COMMANDS_HINT = f"{C_TEXT}  (Type 'menu' to return to main menu, 'exit' or 'quit' to quit){C_RESET}"
 
 
-# --- SESSION & UTILS ---
-def _load_session() -> dict:
-    try:
-        with open(SESSION_FILE) as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
+# --- SYSTEM CLASSES ---
+
+class Session:
+    FILE = os.path.join(os.path.dirname(__file__), "..", "session.json")
+
+    @classmethod
+    def load(cls) -> dict:
+        try:
+            with open(cls.FILE) as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    @classmethod
+    def save(cls, data: dict):
+        session = cls.load()
+        session.update(data)
+        with open(cls.FILE, "w") as f:
+            json.dump(session, f)
 
 
-def _save_session(data: dict):
-    session = _load_session()
-    session.update(data)
-    with open(SESSION_FILE, "w") as f:
-        json.dump(session, f)
+class Navigation:
+    @staticmethod
+    def is_exit(s: str) -> bool:
+        return s.lower() in ("exit", "quit", ":q")
+
+    @staticmethod
+    def is_menu(s: str) -> bool:
+        return s.lower() == "menu"
+
+    @classmethod
+    def check_global_commands(cls, s: str) -> bool:
+        """Returns True if the user wants to abort to the menu."""
+        if cls.is_exit(s):
+            sys.exit()
+        return cls.is_menu(s)
 
 
-def _is_exit(s: str) -> bool:
-    return s.lower() in ("exit", "quit", ":q")
-
-
-def _is_menu(s: str) -> bool:
-    return s.lower() == "menu"
-
-
-def _check_global_commands(s: str) -> bool:
-    """Returns True if the user wants to abort to the menu."""
-    if _is_exit(s):
-        sys.exit()
-    return _is_menu(s)
-
-
-def clear():
-    os.system("clear")
-
-
-# --- UI CLASSES ---
 class Menu:
     def __init__(self, title: str):
         self.title = title
         self.options = []
+
+    @staticmethod
+    def clear():
+        os.system("clear")
 
     def add(self, text: str, value):
         """Adds an option to the menu. 'value' is what gets returned if selected."""
@@ -86,7 +91,7 @@ class Menu:
     def prompt(self):
         """Displays the menu and loops until a valid choice or command is entered."""
         while True:
-            clear()
+            self.clear()
             print(f"{C_BOLD_TEXT}=== {self.title} ==={C_RESET}\n")
             for i, (text, _) in enumerate(self.options, 1):
                 print(f"  [{i}] {text}")
@@ -94,7 +99,7 @@ class Menu:
 
             raw = input("Select an option: ").strip()
 
-            if _check_global_commands(raw):
+            if Navigation.check_global_commands(raw):
                 return None
 
             try:
@@ -104,6 +109,99 @@ class Menu:
             except ValueError:
                 pass
 
+
+# --- GAME UTILITIES ---
+
+class GameUtils:
+    @staticmethod
+    def serialize_board(engine: Engine) -> dict:
+        stats = engine.get_stats()
+        return {
+            "p1_pieces": {str(p.identifier): p.progress for p in engine.p1.pieces},
+            "p2_pieces": {str(p.identifier): p.progress for p in engine.p2.pieces},
+            "stats": {
+                "p1_score": stats.p1_score, "p1_waiting": stats.p1_waiting,
+                "p2_score": stats.p2_score, "p2_waiting": stats.p2_waiting,
+            },
+        }
+
+    @staticmethod
+    def apply_board(engine: Engine, board: dict):
+        for piece in engine.p1.pieces:
+            piece.progress = board["p1_pieces"][str(piece.identifier)]
+        for piece in engine.p2.pieces:
+            piece.progress = board["p2_pieces"][str(piece.identifier)]
+
+    @staticmethod
+    def animate_dice(turn_text: str, player_color: str, roll: int):
+        for _ in range(12):
+            random_dots = " ".join(random.choice(["●", "○"]) for _ in range(4))
+            sys.stdout.write(f"\r{turn_text} turn. Rolling...  [{player_color}{random_dots}{C_RESET}]")
+            sys.stdout.flush()
+            time.sleep(0.06)
+
+        final_faces = ["●"] * roll + ["○"] * (4 - roll)
+        random.shuffle(final_faces)
+        final_str = " ".join(final_faces)
+        sys.stdout.write(f"\r{turn_text} turn. Rolled {roll}! [{player_color}{final_str}{C_RESET}]" + " " * 10 + "\n\n")
+        sys.stdout.flush()
+
+    @staticmethod
+    def build_move_hints(piece: Piece, roll: int, p2: Player, bot_name: str) -> str:
+        target = piece.progress + roll
+        target_coord = piece.player.path[target]
+        hints = []
+
+        if target == 15:
+            hints.append(f"{C_ROSETTA}Scores a point!{C_RESET}")
+        elif target_coord in ROSETTAS:
+            hints.append(f"{C_ROSETTA}Lands on Rosetta (Roll again!){C_RESET}")
+
+        if target_coord is not None:
+            for opp_piece in p2.pieces:
+                if opp_piece.is_available and opp_piece.coord == target_coord:
+                    hints.append(f"{C_P2}Captures {bot_name}'s piece!{C_RESET}")
+
+        return f" — {' '.join(hints)}" if hints else ""
+
+    @classmethod
+    def get_human_move(cls, valid_moves: list[Piece], roll: int, p2: Player, bot_name: str) -> Optional[Piece]:
+        print("Your options:")
+        valid_moves.sort(key=lambda p: p.identifier)
+
+        for piece in valid_moves:
+            target = piece.progress + roll
+            status = "Off-board" if piece.progress == 0 else f"Square {piece.progress}"
+            hint_text = cls.build_move_hints(piece, roll, p2, bot_name)
+            print(f"  {C_P1}{NUM_CIRCLES[piece.identifier]}{C_RESET} : {status} -> Square {target}{hint_text}")
+
+        print(COMMANDS_HINT)
+        while True:
+            raw_input = input("\nSelect a piece to move (1-7): ").strip()
+
+            if Navigation.check_global_commands(raw_input):
+                return None
+
+            try:
+                choice = int(raw_input)
+                chosen = next((p for p in valid_moves if p.identifier == choice), None)
+                if chosen:
+                    return chosen
+                print("Invalid choice. That piece cannot move right now.")
+            except ValueError:
+                print("Please enter a valid piece number.")
+
+    @staticmethod
+    def get_bot_move(bot: Bot, engine: Engine, valid_moves: list[Piece], roll: int) -> Piece:
+        state = {
+            "my_pieces": sorted([p.progress for p in engine.current_player.pieces]),
+            "opp_pieces": sorted([p.progress for p in engine.opponent.pieces]),
+            "current_roll": roll,
+        }
+        return bot.choose_move(state, valid_moves, engine.current_player)
+
+
+# --- UI CLASSES ---
 
 class BoardVisualizer:
     def __init__(self, engine: Engine, local_player: Optional[Player] = None, game_name: str = ""):
@@ -121,7 +219,7 @@ class BoardVisualizer:
         return self.p2 if self._local is self.p1 else self.p1
 
     def draw(self):
-        clear()
+        Menu.clear()
         cells = self._get_cells()
         bottom, top = self._bottom, self._top
 
@@ -187,95 +285,8 @@ class BoardVisualizer:
         return NUM_CIRCLES[piece.identifier]
 
 
-# --- STATELESS GAME HELPERS ---
-def _animate_dice(turn_text: str, player_color: str, roll: int):
-    for _ in range(12):
-        random_dots = " ".join(random.choice(["●", "○"]) for _ in range(4))
-        sys.stdout.write(f"\r{turn_text} turn. Rolling...  [{player_color}{random_dots}{C_RESET}]")
-        sys.stdout.flush()
-        time.sleep(0.06)
-
-    final_faces = ["●"] * roll + ["○"] * (4 - roll)
-    random.shuffle(final_faces)
-    final_str = " ".join(final_faces)
-    sys.stdout.write(f"\r{turn_text} turn. Rolled {roll}! [{player_color}{final_str}{C_RESET}]" + " " * 10 + "\n\n")
-    sys.stdout.flush()
-
-
-def _build_move_hints(piece: Piece, roll: int, p2: Player, bot_name: str) -> str:
-    target = piece.progress + roll
-    target_coord = piece.player.path[target]
-    hints = []
-
-    if target == 15:
-        hints.append(f"{C_ROSETTA}Scores a point!{C_RESET}")
-    elif target_coord in ROSETTAS:
-        hints.append(f"{C_ROSETTA}Lands on Rosetta (Roll again!){C_RESET}")
-
-    if target_coord is not None:
-        for opp_piece in p2.pieces:
-            if opp_piece.is_available and opp_piece.coord == target_coord:
-                hints.append(f"{C_P2}Captures {bot_name}'s piece!{C_RESET}")
-
-    return f" — {' '.join(hints)}" if hints else ""
-
-
-def _get_human_move(valid_moves: list[Piece], roll: int, p2: Player, bot_name: str) -> Optional[Piece]:
-    print("Your options:")
-    valid_moves.sort(key=lambda p: p.identifier)
-
-    for piece in valid_moves:
-        target = piece.progress + roll
-        status = "Off-board" if piece.progress == 0 else f"Square {piece.progress}"
-        hint_text = _build_move_hints(piece, roll, p2, bot_name)
-        print(f"  {C_P1}{NUM_CIRCLES[piece.identifier]}{C_RESET} : {status} -> Square {target}{hint_text}")
-
-    print(COMMANDS_HINT)
-    while True:
-        raw_input = input("\nSelect a piece to move (1-7): ").strip()
-
-        if _check_global_commands(raw_input):
-            return None
-
-        try:
-            choice = int(raw_input)
-            chosen = next((p for p in valid_moves if p.identifier == choice), None)
-            if chosen:
-                return chosen
-            print("Invalid choice. That piece cannot move right now.")
-        except ValueError:
-            print("Please enter a valid piece number.")
-
-
-def _get_bot_move(bot: Bot, engine: Engine, valid_moves: list[Piece], roll: int) -> Piece:
-    state = {
-        "my_pieces": sorted([p.progress for p in engine.current_player.pieces]),
-        "opp_pieces": sorted([p.progress for p in engine.opponent.pieces]),
-        "current_roll": roll,
-    }
-    return bot.choose_move(state, valid_moves, engine.current_player)
-
-
-def _serialize_board(engine: Engine) -> dict:
-    stats = engine.get_stats()
-    return {
-        "p1_pieces": {str(p.identifier): p.progress for p in engine.p1.pieces},
-        "p2_pieces": {str(p.identifier): p.progress for p in engine.p2.pieces},
-        "stats": {
-            "p1_score": stats.p1_score, "p1_waiting": stats.p1_waiting,
-            "p2_score": stats.p2_score, "p2_waiting": stats.p2_waiting,
-        },
-    }
-
-
-def _apply_board(engine: Engine, board: dict):
-    for piece in engine.p1.pieces:
-        piece.progress = board["p1_pieces"][str(piece.identifier)]
-    for piece in engine.p2.pieces:
-        piece.progress = board["p2_pieces"][str(piece.identifier)]
-
-
 # --- MATCH RUNNERS ---
+
 class LocalMatch:
     def __init__(self, bot: Bot, save: Optional[SaveFile] = None):
         self.bot = bot
@@ -302,7 +313,7 @@ class LocalMatch:
 
             player_color = C_P1 if self.engine.current_player == self.p1 else C_P2
             turn_text = "Your" if self.engine.current_player == self.p1 else f"{self.engine.current_player.name}'s"
-            _animate_dice(turn_text, player_color, roll)
+            GameUtils.animate_dice(turn_text, player_color, roll)
 
             if not valid_moves:
                 print("No valid moves. Turn skipped.")
@@ -313,12 +324,12 @@ class LocalMatch:
                 continue
 
             if self.engine.current_player == self.p1:
-                chosen_piece = _get_human_move(valid_moves, roll, self.p2, self.bot.name)
+                chosen_piece = GameUtils.get_human_move(valid_moves, roll, self.p2, self.bot.name)
                 if chosen_piece is None:
                     return  # Abort to menu
             else:
                 time.sleep(1.2)
-                chosen_piece = _get_bot_move(self.bot, self.engine, valid_moves, roll)
+                chosen_piece = GameUtils.get_bot_move(self.bot, self.engine, valid_moves, roll)
                 time.sleep(1.2)
 
             self.engine.execute_move(chosen_piece, roll)
@@ -328,7 +339,7 @@ class LocalMatch:
         self.ui.draw()
         print(f"\nGame Over! {self.engine.winner.name} took the crown!")
         print(COMMANDS_HINT)
-        _check_global_commands(input("\nPress Enter to return to the main menu: ").strip())
+        Navigation.check_global_commands(input("\nPress Enter to return to the main menu: ").strip())
 
 
 class HostMatch:
@@ -343,7 +354,7 @@ class HostMatch:
         self.ui = None
 
     def _setup_game(self):
-        clear()
+        Menu.clear()
         print(f"{C_BOLD_TEXT}=== HOST GAME ==={C_RESET}\n")
 
         lan_saves = [s for s in list_saves() if s.mode == "lan"]
@@ -355,7 +366,7 @@ class HostMatch:
 
         print(COMMANDS_HINT)
         name_input = input("Enter a game name (or press Enter to start fresh): ").strip()
-        if _check_global_commands(name_input):
+        if Navigation.check_global_commands(name_input):
             return False
 
         self.game_name = name_input
@@ -397,7 +408,7 @@ class HostMatch:
             if self.save:
                 self.engine, self.p1, self.p2 = self.save.restore_engine()
                 self.save_path = self.save.path
-                self.server.send({"type": "restore", "board": _serialize_board(self.engine),
+                self.server.send({"type": "restore", "board": GameUtils.serialize_board(self.engine),
                              "last_action": self.engine.last_action,
                              "current_idx": self.engine.current_idx,
                              "game_name": self.game_name})
@@ -421,23 +432,23 @@ class HostMatch:
 
                 player_color = C_P1 if self.engine.current_player == self.p1 else C_P2
                 turn_text = "Your" if self.engine.current_player == self.p1 else "Opponent's"
-                _animate_dice(turn_text, player_color, roll)
+                GameUtils.animate_dice(turn_text, player_color, roll)
 
                 if not valid_moves:
                     self.server.send({"type": "rolling", "roll": roll,
-                                 "board": _serialize_board(self.engine)})
+                                 "board": GameUtils.serialize_board(self.engine)})
                     self.engine.last_action = f"{self.engine.current_player.name} rolled {roll} but had no moves."
                     self.engine.switch_player()
                     self.save_path = save_game(self.engine, "lan", self.game_name, self.save_path)
                     self.server.send({"type": "no_moves", "last_action": self.engine.last_action,
-                                 "board": _serialize_board(self.engine)})
+                                 "board": GameUtils.serialize_board(self.engine)})
                     time.sleep(2)
                     continue
 
                 if self.engine.current_player == self.p1:
                     self.server.send({"type": "rolling", "roll": roll,
-                                 "board": _serialize_board(self.engine)})
-                    chosen_piece = _get_human_move(valid_moves, roll, self.p2, "Opponent")
+                                 "board": GameUtils.serialize_board(self.engine)})
+                    chosen_piece = GameUtils.get_human_move(valid_moves, roll, self.p2, "Opponent")
                     if chosen_piece is None:
                         return  # Abort to menu
                 else:
@@ -446,7 +457,7 @@ class HostMatch:
                         "roll": roll,
                         "valid_moves": [p.identifier for p in valid_moves],
                         "last_action": self.engine.last_action,
-                        "board": _serialize_board(self.engine),
+                        "board": GameUtils.serialize_board(self.engine),
                     })
                     print("Waiting for opponent to move...")
                     msg = self.server.recv()
@@ -459,10 +470,10 @@ class HostMatch:
                 if self.engine.winner:
                     self.server.send({"type": "game_over", "winner": self.engine.winner.name,
                                  "last_action": self.engine.last_action,
-                                 "board": _serialize_board(self.engine)})
+                                 "board": GameUtils.serialize_board(self.engine)})
                 else:
                     self.server.send({"type": "state", "last_action": self.engine.last_action,
-                                 "board": _serialize_board(self.engine)})
+                                 "board": GameUtils.serialize_board(self.engine)})
 
             if self.save_path:
                 delete_save(self.save_path)
@@ -477,7 +488,7 @@ class HostMatch:
             self.server.close()
 
         print(COMMANDS_HINT)
-        _check_global_commands(input("\nPress Enter to return to the main menu: ").strip())
+        Navigation.check_global_commands(input("\nPress Enter to return to the main menu: ").strip())
 
 
 class ClientMatch:
@@ -490,7 +501,7 @@ class ClientMatch:
         self.ui = None
 
     def start(self):
-        clear()
+        Menu.clear()
         print(f"{C_BOLD_TEXT}=== JOIN GAME ==={C_RESET}\n")
         print(f"Connecting to {self.host_ip}:{PORT}...")
         try:
@@ -509,7 +520,7 @@ class ClientMatch:
             self.ui = BoardVisualizer(self.engine, local_player=self.p2, game_name=game_name)
 
             if init["type"] == "restore":
-                _apply_board(self.engine, init["board"])
+                GameUtils.apply_board(self.engine, init["board"])
                 self.engine.last_action = init["last_action"]
                 self.engine.current_idx = init["current_idx"]
                 self.ui.draw()
@@ -521,20 +532,20 @@ class ClientMatch:
                 msg = self.client.recv()
 
                 if msg["type"] == "rolling":
-                    _apply_board(self.engine, msg["board"])
+                    GameUtils.apply_board(self.engine, msg["board"])
                     self.ui.draw()
                     print(f"Last action: {self.engine.last_action}")
-                    _animate_dice("Opponent's", C_P2, msg["roll"])
+                    GameUtils.animate_dice("Opponent's", C_P2, msg["roll"])
 
                 elif msg["type"] in ("state", "no_moves"):
-                    _apply_board(self.engine, msg["board"])
+                    GameUtils.apply_board(self.engine, msg["board"])
                     self.engine.last_action = msg["last_action"]
                     self.ui.draw()
                     print(f"Last action: {self.engine.last_action}")
                     time.sleep(1.2)
 
                 elif msg["type"] == "your_turn":
-                    _apply_board(self.engine, msg["board"])
+                    GameUtils.apply_board(self.engine, msg["board"])
                     self.engine.last_action = msg["last_action"]
                     roll = msg["roll"]
 
@@ -543,15 +554,15 @@ class ClientMatch:
 
                     self.ui.draw()
                     print(f"Last action: {self.engine.last_action}")
-                    _animate_dice("Your", C_P1, roll)
+                    GameUtils.animate_dice("Your", C_P1, roll)
 
-                    chosen_piece = _get_human_move(valid_moves, roll, self.p1, "Host")
+                    chosen_piece = GameUtils.get_human_move(valid_moves, roll, self.p1, "Host")
                     if chosen_piece is None:
                         return  # Abort to menu
                     self.client.send({"type": "move", "piece_id": chosen_piece.identifier})
 
                 elif msg["type"] == "game_over":
-                    _apply_board(self.engine, msg["board"])
+                    GameUtils.apply_board(self.engine, msg["board"])
                     self.engine.last_action = msg["last_action"]
                     self.ui.draw()
                     print(f"\nGame Over! {msg['winner']} took the crown!")
@@ -565,12 +576,13 @@ class ClientMatch:
             self.client.close()
 
         print(COMMANDS_HINT)
-        _check_global_commands(input("\nPress Enter to return to the main menu: ").strip())
+        Navigation.check_global_commands(input("\nPress Enter to return to the main menu: ").strip())
 
 
 # --- MENUS ---
+
 def show_tutorial():
-    clear()
+    Menu.clear()
     print(f"{C_BOLD_TEXT}=== HOW TO PLAY THE ROYAL GAME OF UR ==={C_RESET}\n")
     print("1. Objective: Move all 7 of your pieces across the board to the end before your opponent.")
     print("2. Movement: You roll 4 binary dice each turn, yielding a move of 0 to 4 spaces.")
@@ -581,7 +593,7 @@ def show_tutorial():
     print("   Additionally, the central Rosetta is a safe haven where your piece cannot be captured.\n")
     print(COMMANDS_HINT)
     raw = input("\nPress Enter to return to the main menu: ").strip()
-    _check_global_commands(raw)
+    Navigation.check_global_commands(raw)
 
 
 def _pick_local_save_menu() -> Optional[SaveFile]:
@@ -634,19 +646,19 @@ def main_menu():
         elif choice == "host":
             HostMatch().start()
         elif choice == "join":
-            clear()
+            Menu.clear()
             print(f"{C_BOLD_TEXT}=== JOIN GAME ==={C_RESET}\n")
-            last_ip = _load_session().get("last_ip", "")
+            last_ip = Session.load().get("last_ip", "")
             prompt = f"Enter host IP address [{last_ip}]: " if last_ip else "Enter host IP address: "
             print(COMMANDS_HINT + "\n")
             host_ip = input(prompt).strip()
 
-            if _check_global_commands(host_ip):
+            if Navigation.check_global_commands(host_ip):
                 continue
 
             host_ip = host_ip or last_ip
             if host_ip:
-                _save_session({"last_ip": host_ip})
+                Session.save({"last_ip": host_ip})
                 ClientMatch(host_ip).start()
         elif choice == "tutorial":
             show_tutorial()

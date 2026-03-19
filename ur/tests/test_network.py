@@ -4,7 +4,7 @@ import unittest
 
 from ur.game import Player, Engine, P1_PATH, P2_PATH, FINISH
 from ur.network import Connection, Server, Client
-from ur.play import _serialize_board, _apply_board
+from ur.play import GameUtils
 
 
 def get_free_port():
@@ -171,7 +171,7 @@ class TestBoardSerialization(unittest.TestCase):
     def test_roundtrip_all_at_start(self):
         engine, _, _ = self._make_engine()
         engine2, _, _ = self._make_engine()
-        _apply_board(engine2, _serialize_board(engine))
+        GameUtils.apply_board(engine2, GameUtils.serialize_board(engine))
         for p in engine2.p1.pieces:
             self.assertEqual(p.progress, 0)
         for p in engine2.p2.pieces:
@@ -185,7 +185,7 @@ class TestBoardSerialization(unittest.TestCase):
         p2.pieces[6].progress = FINISH
 
         engine2, _, _ = self._make_engine()
-        _apply_board(engine2, _serialize_board(engine))
+        GameUtils.apply_board(engine2, GameUtils.serialize_board(engine))
 
         self.assertEqual(engine2.p1.pieces[0].progress, 5)
         self.assertEqual(engine2.p1.pieces[3].progress, 12)
@@ -198,10 +198,10 @@ class TestBoardSerialization(unittest.TestCase):
         engine, p1, _ = self._make_engine()
         p1.pieces[2].progress = 9
 
-        serialized = json.loads(json.dumps(_serialize_board(engine)))
+        serialized = json.loads(json.dumps(GameUtils.serialize_board(engine)))
 
         engine2, _, _ = self._make_engine()
-        _apply_board(engine2, serialized)
+        GameUtils.apply_board(engine2, serialized)
         self.assertEqual(engine2.p1.pieces[2].progress, 9)
 
 
@@ -237,17 +237,17 @@ class TestFullGameIntegration(unittest.TestCase):
                     if not valid_moves:
                         engine.switch_player()
                         server.send({"type": "no_moves", "last_action": "",
-                                     "board": _serialize_board(engine)})
+                                     "board": GameUtils.serialize_board(engine)})
                         continue
 
                     if engine.current_player == p1:
                         server.send({"type": "rolling", "roll": roll,
-                                     "board": _serialize_board(engine)})
+                                     "board": GameUtils.serialize_board(engine)})
                         engine.execute_move(valid_moves[0], roll)
                     else:
                         server.send({"type": "your_turn", "roll": roll,
                                      "valid_moves": [p.identifier for p in valid_moves],
-                                     "last_action": "", "board": _serialize_board(engine)})
+                                     "last_action": "", "board": GameUtils.serialize_board(engine)})
                         msg = server.recv()
                         chosen = next(p for p in valid_moves if p.identifier == msg["piece_id"])
                         engine.execute_move(chosen, roll)
@@ -256,7 +256,7 @@ class TestFullGameIntegration(unittest.TestCase):
                     server.send({"type": msg_type,
                                  "winner": engine.winner.name if engine.winner else None,
                                  "last_action": engine.last_action,
-                                 "board": _serialize_board(engine)})
+                                 "board": GameUtils.serialize_board(engine)})
 
                 winner_names["host_side"] = engine.winner.name
             except Exception as e:
@@ -277,14 +277,14 @@ class TestFullGameIntegration(unittest.TestCase):
                 while True:
                     msg = client.recv()
                     if msg["type"] in ("rolling", "state", "no_moves"):
-                        _apply_board(engine, msg["board"])
+                        GameUtils.apply_board(engine, msg["board"])
                     elif msg["type"] == "your_turn":
-                        _apply_board(engine, msg["board"])
+                        GameUtils.apply_board(engine, msg["board"])
                         valid_moves = [p for p in p2.pieces
                                        if p.identifier in set(msg["valid_moves"])]
                         client.send({"type": "move", "piece_id": valid_moves[0].identifier})
                     elif msg["type"] == "game_over":
-                        _apply_board(engine, msg["board"])
+                        GameUtils.apply_board(engine, msg["board"])
                         winner_names["client_side"] = msg["winner"]
                         break
             except Exception as e:
@@ -334,16 +334,16 @@ class TestFullGameIntegration(unittest.TestCase):
                 if not valid_moves:
                     engine.switch_player()
                     server.send({"type": "no_moves", "last_action": "",
-                                 "board": _serialize_board(engine)})
+                                 "board": GameUtils.serialize_board(engine)})
                     continue
                 if engine.current_player == p1:
                     server.send({"type": "rolling", "roll": roll,
-                                 "board": _serialize_board(engine)})
+                                 "board": GameUtils.serialize_board(engine)})
                     engine.execute_move(valid_moves[0], roll)
                 else:
                     server.send({"type": "your_turn", "roll": roll,
                                  "valid_moves": [p.identifier for p in valid_moves],
-                                 "last_action": "", "board": _serialize_board(engine)})
+                                 "last_action": "", "board": GameUtils.serialize_board(engine)})
                     msg = server.recv()
                     chosen = next(p for p in valid_moves if p.identifier == msg["piece_id"])
                     engine.execute_move(chosen, roll)
@@ -351,7 +351,7 @@ class TestFullGameIntegration(unittest.TestCase):
                 server.send({"type": msg_type,
                              "winner": engine.winner.name if engine.winner else None,
                              "last_action": engine.last_action,
-                             "board": _serialize_board(engine)})
+                             "board": GameUtils.serialize_board(engine)})
             final_engine["winner"] = engine.winner.name
             final_engine["p1_done"] = all(p.progress == FINISH for p in p1.pieces)
             final_engine["p2_done"] = all(p.progress == FINISH for p in p2.pieces)
@@ -367,14 +367,14 @@ class TestFullGameIntegration(unittest.TestCase):
             while True:
                 msg = client.recv()
                 if msg["type"] in ("rolling", "state", "no_moves"):
-                    _apply_board(engine, msg["board"])
+                    GameUtils.apply_board(engine, msg["board"])
                 elif msg["type"] == "your_turn":
-                    _apply_board(engine, msg["board"])
+                    GameUtils.apply_board(engine, msg["board"])
                     valid_moves = [p for p in p2.pieces
                                    if p.identifier in set(msg["valid_moves"])]
                     client.send({"type": "move", "piece_id": valid_moves[0].identifier})
                 elif msg["type"] == "game_over":
-                    _apply_board(engine, msg["board"])
+                    GameUtils.apply_board(engine, msg["board"])
                     break
             client.close()
 

@@ -1,7 +1,7 @@
 import unittest
 
 from ur.game import Player, Engine, P1_PATH, P2_PATH
-from ur.play import _build_move_hints, BoardVisualizer
+from ur.play import BoardVisualizer, GameUtils
 
 
 def make_game():
@@ -30,7 +30,7 @@ class TestMoveHints(unittest.TestCase):
         self.p2.pieces[0].progress = 0
 
         # P1 rolls a 1, moving from 14 -> 15 (Off the board)
-        hint = _build_move_hints(piece, 1, self.p2, "Bot")
+        hint = GameUtils.build_move_hints(piece, 1, self.p2, "Bot")
 
         self.assertIn("Scores a point!", hint)
         self.assertNotIn("Captures", hint, "Phantom capture detected! None == None bug is back.")
@@ -42,7 +42,7 @@ class TestMoveHints(unittest.TestCase):
 
         self.p2.pieces[0].progress = 5  # Opponent is 1 space ahead
 
-        hint = _build_move_hints(piece, 1, self.p2, "Bot")
+        hint = GameUtils.build_move_hints(piece, 1, self.p2, "Bot")
 
         self.assertIn("Captures Bot's piece!", hint)
         self.assertNotIn("Scores a point!", hint)
@@ -52,7 +52,7 @@ class TestMoveHints(unittest.TestCase):
         piece = self.p1.pieces[0]
         piece.progress = 3  # 1 space away from the first private Rosetta (progress 4)
 
-        hint = _build_move_hints(piece, 1, self.p2, "Bot")
+        hint = GameUtils.build_move_hints(piece, 1, self.p2, "Bot")
 
         self.assertIn("Lands on Rosetta (Roll again!)", hint)
 
