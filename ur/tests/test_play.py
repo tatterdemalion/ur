@@ -1,7 +1,7 @@
 import unittest
 
 from ur.game import Player, Engine, P1_PATH, P2_PATH
-from ur.play import BoardVisualizer, GameUtils
+from ur.cli.play import BoardVisualizer, GameUtils
 
 
 def make_game():

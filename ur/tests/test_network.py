@@ -4,7 +4,7 @@ import unittest
 
 from ur.game import Player, Engine, P1_PATH, P2_PATH, FINISH
 from ur.network import Connection, Server, Client
-from ur.play import GameUtils
+from ur.cli.play import GameUtils
 
 
 def get_free_port():
