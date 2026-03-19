@@ -45,15 +45,6 @@ Want to see who wins in a 10,000 game tournament between the `StrategicBot` and 
 
 *Add the `--show` flag to watch them battle it out in the terminal in real-time.*
 
-## 🏗️ Architecture & Technical Highlights
-
-This codebase was engineered to be clean, modular, and highly extensible:
-
-* **Strict MVC Separation:** The `Engine` and `Piece` classes handle strict validation and game state. They have zero knowledge of the terminal UI or the network layer. 
-* **Dictionary Unpacking Templating:** The complex terminal UI avoids chaotic string concatenation by utilizing a static ASCII grid template and Python's native `**kwargs` dictionary unpacking (`TEMPLATE.format(**cells)`).
-* **"Dumb Client" Networking:** LAN multiplayer utilizes a centralized `Server` that acts as the absolute authority. The `Client` simply receives state payloads and renders them, making the network layer cheat-proof and immune to logic desyncs.
-* **Graceful Exception Handling:** Deep CLI menus are managed via a custom `BackToMenu` exception, allowing users to type `menu` anywhere to instantly unwind the call stack and safely close socket connections.
-
 ## 📜 How to Play
 
 The rules follow the standard modern interpretation of the ancient Mesopotamian game:
@@ -69,7 +60,7 @@ The rules follow the standard modern interpretation of the ancient Mesopotamian 
 - [x] LAN Multiplayer (Raw TCP Sockets)
 - [x] Session Persistence (JSON Auto-saves)
 - [ ] **Phase 3:** Machine Learning (Q-Learning bot trained over millions of self-play games)
-- [ ] **Phase 4:** Cloud Multiplayer (WebSockets / FastAPI Backend)
+- [ ] **Phase 4:** Online Multiplayer (WebSockets / FastAPI Backend)
 
 ## 📄 License
 
