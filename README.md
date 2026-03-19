@@ -55,7 +55,7 @@ The rules follow the standard modern interpretation of the ancient Mesopotamian 
 
 ## 🗺️ Roadmap
 
-- [x] Engine Refactor & OOP Entities
+- [x] Engine & Entities
 - [x] Bot Simulation Framework
 - [x] LAN Multiplayer (Raw TCP Sockets)
 - [x] Session Persistence (JSON Auto-saves)
