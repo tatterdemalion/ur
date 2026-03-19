@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Optional
 
 # --- 1. THE BOARD GEOMETRY ---
-
 P1_PATH = {
     0: None, 1: (2, 3), 2: (2, 2), 3: (2, 1), 4: (2, 0),
     5: (1, 0), 6: (1, 1), 7: (1, 2), 8: (1, 3), 9: (1, 4), 10: (1, 5), 11: (1, 6), 12: (1, 7),
@@ -104,7 +103,6 @@ class Engine:
             p2_score=sum(1 for p in self.p2.pieces if p.progress == FINISH),
             p2_waiting=sum(1 for p in self.p2.pieces if p.progress == 0),
         )
-
 
     def switch_player(self) -> Player:
         self.current_idx = self.opponent_idx
