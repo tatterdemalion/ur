@@ -1,7 +1,9 @@
 import unittest
 
 from ur.game import Player, Engine, P1_PATH, P2_PATH
-from ur.cli.play import BoardVisualizer, GameUtils
+from ur.cli.board import Board
+from ur.cli.utils import GameUtils
+from ur.cli.menu import Navigation
 
 
 def make_game():
@@ -67,8 +69,7 @@ class TestBoardVisualizer(unittest.TestCase):
         """Test that pieces map to the correct template variables as the Host (P1)."""
         self.p1.pieces[0].progress = 4  # P1 private path (bottom row, coord 2,0) -> 'o'
         self.p2.pieces[0].progress = 4  # P2 private path (top row, coord 0,0) -> 'a'
-
-        ui = BoardVisualizer(self.game)
+        ui = Board(self.game, Navigation())
         cells = ui._get_cells()
 
         # P1 is local, so their piece is drawn with a circled number ①
@@ -85,7 +86,7 @@ class TestBoardVisualizer(unittest.TestCase):
         self.p2.pieces[0].progress = 4  # P2 private path (coord 0,0)
 
         # Initialize the UI pretending we are the Client (P2)
-        ui = BoardVisualizer(self.game, local_player=self.p2)
+        ui = Board(self.game, Navigation(), local_player=self.p2)
         cells = ui._get_cells()
 
         # Because the board is flipped, P2's piece at (0,0) should now map to the
