@@ -34,9 +34,6 @@ TEMPLATE = """\
 ╚═══╩═══╩═══╩═══╝       ╚═══╩═══╝\
 """
 
-COMMANDS_HINT = f"{C_TEXT}  (Type 'menu' to return to main menu, 'exit' or 'quit' to quit){C_RESET}"
-
-
 # --- SYSTEM CLASSES ---
 
 class Session:
@@ -59,6 +56,8 @@ class Session:
 
 
 class Navigation:
+    COMMANDS_HINT = f"{C_TEXT}  (Type 'menu' to return to main menu, 'exit' or 'quit' to quit){C_RESET}"
+
     @staticmethod
     def is_exit(s: str) -> bool:
         return s.lower() in ("exit", "quit", ":q")
@@ -74,15 +73,19 @@ class Navigation:
             sys.exit()
         return cls.is_menu(s)
 
+    @staticmethod
+    def print_commands() -> None:
+        print(f"\n{Navigation.COMMANDS_HINT}\n")
+
+    @staticmethod
+    def clear():
+        os.system("clear")
+
 
 class Menu:
     def __init__(self, title: str):
         self.title = title
         self.options = []
-
-    @staticmethod
-    def clear():
-        os.system("clear")
 
     def add(self, text: str, value):
         """Adds an option to the menu. 'value' is what gets returned if selected."""
@@ -91,11 +94,11 @@ class Menu:
     def prompt(self):
         """Displays the menu and loops until a valid choice or command is entered."""
         while True:
-            self.clear()
+            Navigation.clear()
             print(f"{C_BOLD_TEXT}=== {self.title} ==={C_RESET}\n")
             for i, (text, _) in enumerate(self.options, 1):
                 print(f"  [{i}] {text}")
-            print(f"\n{COMMANDS_HINT}\n")
+            Navigation.print_commands()
 
             raw = input("Select an option: ").strip()
 
@@ -175,7 +178,7 @@ class GameUtils:
             hint_text = cls.build_move_hints(piece, roll, p2, bot_name)
             print(f"  {C_P1}{NUM_CIRCLES[piece.identifier]}{C_RESET} : {status} -> Square {target}{hint_text}")
 
-        print(COMMANDS_HINT)
+        Navigation.print_commands()
         while True:
             raw_input = input("\nSelect a piece to move (1-7): ").strip()
 
@@ -219,7 +222,7 @@ class BoardVisualizer:
         return self.p2 if self._local is self.p1 else self.p1
 
     def draw(self):
-        Menu.clear()
+        Navigation.clear()
         cells = self._get_cells()
         bottom, top = self._bottom, self._top
 
@@ -335,10 +338,11 @@ class LocalMatch:
             self.engine.execute_move(chosen_piece, roll)
             self.save_path = save_game(self.engine, "local", self.game_name, self.save_path)
 
-        delete_save(self.save_path)
+        if self.save_path:
+            delete_save(self.save_path)
         self.ui.draw()
         print(f"\nGame Over! {self.engine.winner.name} took the crown!")
-        print(COMMANDS_HINT)
+        Navigation.print_commands()
         Navigation.check_global_commands(input("\nPress Enter to return to the main menu: ").strip())
 
 
@@ -354,7 +358,7 @@ class HostMatch:
         self.ui = None
 
     def _setup_game(self):
-        Menu.clear()
+        Navigation.clear()
         print(f"{C_BOLD_TEXT}=== HOST GAME ==={C_RESET}\n")
 
         lan_saves = [s for s in list_saves() if s.mode == "lan"]
@@ -364,7 +368,7 @@ class HostMatch:
                 print(f"  {C_P1}{s.game_name}{C_RESET}  — saved {s.saved_at[:16]}")
             print()
 
-        print(COMMANDS_HINT)
+        Navigation.print_commands()
         name_input = input("Enter a game name (or press Enter to start fresh): ").strip()
         if Navigation.check_global_commands(name_input):
             return False
@@ -487,7 +491,7 @@ class HostMatch:
         finally:
             self.server.close()
 
-        print(COMMANDS_HINT)
+        Navigation.print_commands()
         Navigation.check_global_commands(input("\nPress Enter to return to the main menu: ").strip())
 
 
@@ -501,7 +505,7 @@ class ClientMatch:
         self.ui = None
 
     def start(self):
-        Menu.clear()
+        Navigation.clear()
         print(f"{C_BOLD_TEXT}=== JOIN GAME ==={C_RESET}\n")
         print(f"Connecting to {self.host_ip}:{PORT}...")
         try:
@@ -575,14 +579,14 @@ class ClientMatch:
         finally:
             self.client.close()
 
-        print(COMMANDS_HINT)
+        Navigation.print_commands()
         Navigation.check_global_commands(input("\nPress Enter to return to the main menu: ").strip())
 
 
 # --- MENUS ---
 
 def show_tutorial():
-    Menu.clear()
+    Navigation.clear()
     print(f"{C_BOLD_TEXT}=== HOW TO PLAY THE ROYAL GAME OF UR ==={C_RESET}\n")
     print("1. Objective: Move all 7 of your pieces across the board to the end before your opponent.")
     print("2. Movement: You roll 4 binary dice each turn, yielding a move of 0 to 4 spaces.")
@@ -591,7 +595,7 @@ def show_tutorial():
     print("   sending it back off-board to start over.")
     print(f"5. Rosettas: Landing on a Rosetta ({C_ROSETTA}✿{C_RESET}) grants an extra turn immediately.")
     print("   Additionally, the central Rosetta is a safe haven where your piece cannot be captured.\n")
-    print(COMMANDS_HINT)
+    Navigation.print_commands()
     raw = input("\nPress Enter to return to the main menu: ").strip()
     Navigation.check_global_commands(raw)
 
@@ -646,11 +650,11 @@ def main_menu():
         elif choice == "host":
             HostMatch().start()
         elif choice == "join":
-            Menu.clear()
+            Navigation.clear()
             print(f"{C_BOLD_TEXT}=== JOIN GAME ==={C_RESET}\n")
             last_ip = Session.load().get("last_ip", "")
             prompt = f"Enter host IP address [{last_ip}]: " if last_ip else "Enter host IP address: "
-            print(COMMANDS_HINT + "\n")
+            Navigation.print_commands()
             host_ip = input(prompt).strip()
 
             if Navigation.check_global_commands(host_ip):
