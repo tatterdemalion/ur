@@ -1,37 +1,78 @@
+import datetime
 import json
 import os
 import random
-import datetime
 from dataclasses import dataclass
 from typing import Optional
 
-from ur.game import Player, Engine, P1_PATH, P2_PATH
+from ur.game import Engine, Player
+from ur.rules import P1_PATH, P2_PATH
 
 SAVES_DIR = os.path.join(os.path.dirname(__file__), "..", "saves")
 
-import random
 
 _ADJECTIVES = [
-    "Sunbaked", "Cursed", "Divine", "Fallen", "Golden",
-    "Brazen", "Exiled", "Sacred", "Forgotten", "Ruthless",
-    "Astral", "Ancient", "Royal", "Dusty", "Reckless"
+    "Sunbaked",
+    "Cursed",
+    "Divine",
+    "Fallen",
+    "Golden",
+    "Brazen",
+    "Exiled",
+    "Sacred",
+    "Forgotten",
+    "Ruthless",
+    "Astral",
+    "Ancient",
+    "Royal",
+    "Dusty",
+    "Reckless",
 ]
 
 _MATERIALS = [
-    "Bronze", "Lapis", "Mudbrick", "Clay", "Obsidian",
-    "Copper", "Ivory", "Silver", "Reed", "Cedar"
+    "Bronze",
+    "Lapis",
+    "Mudbrick",
+    "Clay",
+    "Obsidian",
+    "Copper",
+    "Ivory",
+    "Silver",
+    "Reed",
+    "Cedar",
 ]
 
 _NOUNS = [
-    "Ziggurat", "Tablet", "Chariot", "Priestess", "Scribe",
-    "King", "Oracle", "Nomad", "Idol", "Relic",
-    "River", "Flood", "Dagger", "Tomb", "Crown"
+    "Ziggurat",
+    "Tablet",
+    "Chariot",
+    "Priestess",
+    "Scribe",
+    "King",
+    "Oracle",
+    "Nomad",
+    "Idol",
+    "Relic",
+    "River",
+    "Flood",
+    "Dagger",
+    "Tomb",
+    "Crown",
 ]
 
 _CITIES = [
-    "Ur", "Uruk", "Babylon", "Akkad", "Nippur",
-    "Eridu", "Lagash", "Sumer", "Kish", "Nineveh"
+    "Ur",
+    "Uruk",
+    "Babylon",
+    "Akkad",
+    "Nippur",
+    "Eridu",
+    "Lagash",
+    "Sumer",
+    "Kish",
+    "Nineveh",
 ]
+
 
 def generate_game_name() -> str:
     """Generates a thematic Mesopotamian save game name."""
@@ -40,15 +81,12 @@ def generate_game_name() -> str:
     patterns = [
         # Example: Cursed_Ziggurat
         lambda: f"{random.choice(_ADJECTIVES)}_{random.choice(_NOUNS)}",
-
         # Example: Lapis_Chariot
         lambda: f"{random.choice(_MATERIALS)}_{random.choice(_NOUNS)}",
-
         # Example: Priestess_of_Uruk
         lambda: f"{random.choice(_NOUNS)}_of_{random.choice(_CITIES)}",
-
         # Example: Ur_Nomad
-        lambda: f"{random.choice(_CITIES)}_{random.choice(_NOUNS)}"
+        lambda: f"{random.choice(_CITIES)}_{random.choice(_NOUNS)}",
     ]
 
     return random.choice(patterns)()
@@ -63,12 +101,12 @@ def game_name_to_path(name: str) -> str:
 class SaveFile:
     path: str
     game_name: str
-    mode: str          # "local" | "lan"
+    mode: str  # "local" | "lan"
     p1_name: str
     p2_name: str
     current_idx: int
     last_action: str
-    p1_pieces: dict    # str(identifier) -> progress
+    p1_pieces: dict  # str(identifier) -> progress
     p2_pieces: dict
     started_at: str
     saved_at: str

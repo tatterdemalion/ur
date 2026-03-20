@@ -2,22 +2,7 @@ import random
 from dataclasses import dataclass
 from typing import Optional
 
-# --- 1. THE BOARD GEOMETRY ---
-P1_PATH = {
-    0: None, 1: (2, 3), 2: (2, 2), 3: (2, 1), 4: (2, 0),
-    5: (1, 0), 6: (1, 1), 7: (1, 2), 8: (1, 3), 9: (1, 4), 10: (1, 5), 11: (1, 6), 12: (1, 7),
-    13: (2, 7), 14: (2, 6), 15: None
-}
-
-P2_PATH = {
-    0: None, 1: (0, 3), 2: (0, 2), 3: (0, 1), 4: (0, 0),
-    5: (1, 0), 6: (1, 1), 7: (1, 2), 8: (1, 3), 9: (1, 4), 10: (1, 5), 11: (1, 6), 12: (1, 7),
-    13: (0, 7), 14: (0, 6), 15: None
-}
-
-ROSETTAS = {(0, 0), (2, 0), (1, 3), (0, 6), (2, 6)}
-FINAL_SQUARE = 14
-FINISH = 15
+from ur.rules import FINISH, ROSETTAS
 
 
 @dataclass
@@ -34,8 +19,6 @@ class Piece:
         self.identifier = identifier
         self.player = player
         self.progress = 0
-        self.target_progress = 0
-        self.target_coord = None
 
     @property
     def coord(self):
@@ -45,16 +28,12 @@ class Piece:
     def is_available(self):
         return 0 <= self.progress < FINISH
 
-    def target(self, roll:int) -> "Piece":
-        self.target_progress = self.progress + roll
-        self.target_coord = self.player.path.get(self.target_progress)
-        return self
 
-    def move(self, target: Optional[int] = None):
-        if target is not None:
-            self.progress = target
-        else:
-            self.progress = self.target_progress
+@dataclass
+class Move:
+    piece: Piece
+    target_progress: int
+    target_coord: Optional[tuple]
 
 
 class Player:
@@ -96,6 +75,27 @@ class Engine:
                 return player
         return None
 
+    def snapshot(self) -> dict:
+        """Serialize piece positions to a JSON-safe dict for network/save use."""
+        stats = self.get_stats()
+        return {
+            "p1_pieces": {str(p.identifier): p.progress for p in self.p1.pieces},
+            "p2_pieces": {str(p.identifier): p.progress for p in self.p2.pieces},
+            "stats": {
+                "p1_score": stats.p1_score,
+                "p1_waiting": stats.p1_waiting,
+                "p2_score": stats.p2_score,
+                "p2_waiting": stats.p2_waiting,
+            },
+        }
+
+    def restore(self, board: dict):
+        """Apply a snapshot dict back onto this engine's piece positions."""
+        for piece in self.p1.pieces:
+            piece.progress = board["p1_pieces"][str(piece.identifier)]
+        for piece in self.p2.pieces:
+            piece.progress = board["p2_pieces"][str(piece.identifier)]
+
     def get_stats(self) -> Stats:
         return Stats(
             p1_score=sum(1 for p in self.p1.pieces if p.progress == FINISH),
@@ -111,57 +111,65 @@ class Engine:
     def roll_dice(self) -> int:
         return sum(random.getrandbits(1) for _ in range(4))
 
-    def get_valid_moves(self, roll: int) -> list[Piece]:
+    def get_valid_moves(self, roll: int) -> list[Move]:
         if roll == 0:
             return []
 
         current_occupied = {p.progress for p in self.current_player.pieces if p.progress < FINISH}
-        opponent_safe = {p.coord for p in self.opponent.pieces if p.is_available and p.coord in ROSETTAS}
+        opponent_safe = {
+            p.coord for p in self.opponent.pieces if p.is_available and p.coord in ROSETTAS
+        }
 
         valid_moves = []
 
         for piece in self.current_player.pieces:
-            piece.target(roll)
-
             # Rule A: Piece is already done
             if not piece.is_available:
                 continue
 
+            target_progress = piece.progress + roll
+
             # Rule B: Needs exact roll to score
-            if piece.target_progress > FINISH:
+            if target_progress > FINISH:
                 continue
 
             # Rule C: Cannot land on your own piece
-            if piece.target_progress in current_occupied:
+            if target_progress in current_occupied:
                 continue
+
+            target_coord = self.current_player.path.get(target_progress)
 
             # Rule D: Cannot hit an opponent on a Rosetta
-            if piece.target_coord in opponent_safe:
+            if target_coord in opponent_safe:
                 continue
 
-            valid_moves.append(piece)
+            valid_moves.append(
+                Move(piece=piece, target_progress=target_progress, target_coord=target_coord)
+            )
 
         return valid_moves
 
-    def execute_move(self, piece: Piece, roll: int):
+    def execute_move(self, move: Move, roll: int):
         state = "moved"
-        roll_again = piece.target_coord in ROSETTAS and piece.target_progress < FINISH
+        roll_again = move.target_coord in ROSETTAS and move.target_progress < FINISH
 
         # Check for hit
-        if piece.target_coord is not None:
+        if move.target_coord is not None:
             for opp_piece in self.opponent.pieces:
-                if opp_piece.coord == piece.target_coord and opp_piece.is_available:
-                    opp_piece.move(target=0)
+                if opp_piece.coord == move.target_coord and opp_piece.is_available:
+                    opp_piece.progress = 0
                     state = "hit opponent"
                     break
 
-        piece.move()
+        move.piece.progress = move.target_progress
 
-        if piece.progress == FINISH:
+        if move.piece.progress == FINISH:
             state = "scored"
             roll_again = False
 
-        self.last_action = f"{self.current_player.name} rolled {roll}: {piece.identifier} {state}."
+        self.last_action = (
+            f"{self.current_player.name} rolled {roll}: {move.piece.identifier} {state}."
+        )
 
         if self.current_player.has_won():
             pass

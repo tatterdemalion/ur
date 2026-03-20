@@ -1,4 +1,5 @@
-from ur.game import Player, Engine, P1_PATH, P2_PATH
+from ur.game import Engine, Player
+from ur.rules import P1_PATH, P2_PATH
 
 
 class UrEnvironment:
@@ -25,7 +26,7 @@ class UrEnvironment:
         return {
             "my_pieces": sorted([p.progress for p in active_p.pieces]),
             "opp_pieces": sorted([p.progress for p in opp_p.pieces]),
-            "current_roll": self.current_roll
+            "current_roll": self.current_roll,
         }
 
     def _advance_to_next_decision(self):
@@ -42,13 +43,13 @@ class UrEnvironment:
 
             if not valid_moves:
                 # No moves? The environment handles skipping the turn automatically.
-                self.game.current_idx = 1 - self.game.current_idx
+                self.game.switch_player()
                 continue
 
             # We found a valid move! Pause and hand control to the bots.
             return self._get_state(), valid_moves, False, 0
 
-    def step(self, chosen_piece):
+    def step(self, chosen_move):
         """
         Takes the bot's chosen piece, executes it, calculates the reward,
         and fast-forwards to the next decision.
@@ -58,7 +59,7 @@ class UrEnvironment:
         scored_before = sum(1 for p in self.game.current_player.pieces if p.progress == 15)
 
         # Execute
-        self.game.execute_move(chosen_piece, self.current_roll)
+        self.game.execute_move(chosen_move, self.current_roll)
 
         # Calculate intermediate rewards (Great for training RL later)
         reward = 0
@@ -68,7 +69,7 @@ class UrEnvironment:
         if scored_after > scored_before:
             reward += 10.0  # Big reward for scoring
         if opp_active_after < opp_active_before:
-            reward += 5.0   # Medium reward for a hit
+            reward += 5.0  # Medium reward for a hit
 
         # Fast-forward to the next time someone needs to make a choice
         next_state, next_valid_moves, done, final_reward = self._advance_to_next_decision()
