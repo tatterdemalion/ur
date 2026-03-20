@@ -2,13 +2,15 @@ import threading
 import time
 import unittest
 
-from ur.game import Player, Engine, P1_PATH, P2_PATH, FINISH
-from ur.network import Connection, Server, Client
-from ur.cli.utils import GameUtils
+from ur.cli.protocol import ClientProtocol, HostProtocol
+from ur.game import Engine, Player
+from ur.network import Client, Connection, Server
+from ur.rules import FINISH, P1_PATH, P2_PATH
 
 
 def get_free_port():
     import socket
+
     with socket.socket() as s:
         s.bind(("", 0))
         return s.getsockname()[1]
@@ -17,6 +19,7 @@ def get_free_port():
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_connected_pair(port):
     """Return (server, client) both connected, server has accepted."""
@@ -42,11 +45,13 @@ def make_connected_pair(port):
 # 1. Protocol layer (Connection)
 # ---------------------------------------------------------------------------
 
+
 class TestConnection(unittest.TestCase):
     """Low-level send/recv over a real socket pair."""
 
     def setUp(self):
         import socket
+
         self.port = get_free_port()
         # Build a raw socket pair via a temporary listener
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -112,8 +117,8 @@ class TestConnection(unittest.TestCase):
 # 2. Server / Client API
 # ---------------------------------------------------------------------------
 
-class TestServerClient(unittest.TestCase):
 
+class TestServerClient(unittest.TestCase):
     def setUp(self):
         self.port = get_free_port()
         self.server, self.client = make_connected_pair(self.port)
@@ -161,8 +166,8 @@ class TestServerClient(unittest.TestCase):
 # 3. Board serialization helpers
 # ---------------------------------------------------------------------------
 
-class TestBoardSerialization(unittest.TestCase):
 
+class TestBoardSerialization(unittest.TestCase):
     def _make_engine(self):
         p1 = Player("P1", P1_PATH, "●")
         p2 = Player("P2", P2_PATH, "●")
@@ -171,7 +176,7 @@ class TestBoardSerialization(unittest.TestCase):
     def test_roundtrip_all_at_start(self):
         engine, _, _ = self._make_engine()
         engine2, _, _ = self._make_engine()
-        GameUtils.apply_board(engine2, GameUtils.serialize_board(engine))
+        engine2.restore(engine.snapshot())
         for p in engine2.p1.pieces:
             self.assertEqual(p.progress, 0)
         for p in engine2.p2.pieces:
@@ -185,7 +190,7 @@ class TestBoardSerialization(unittest.TestCase):
         p2.pieces[6].progress = FINISH
 
         engine2, _, _ = self._make_engine()
-        GameUtils.apply_board(engine2, GameUtils.serialize_board(engine))
+        engine2.restore(engine.snapshot())
 
         self.assertEqual(engine2.p1.pieces[0].progress, 5)
         self.assertEqual(engine2.p1.pieces[3].progress, 12)
@@ -195,13 +200,14 @@ class TestBoardSerialization(unittest.TestCase):
     def test_roundtrip_via_json(self):
         """Simulate actual network transit (keys become strings after JSON)."""
         import json
+
         engine, p1, _ = self._make_engine()
         p1.pieces[2].progress = 9
 
-        serialized = json.loads(json.dumps(GameUtils.serialize_board(engine)))
+        serialized = json.loads(json.dumps(engine.snapshot()))
 
         engine2, _, _ = self._make_engine()
-        GameUtils.apply_board(engine2, serialized)
+        engine2.restore(serialized)
         self.assertEqual(engine2.p1.pieces[2].progress, 9)
 
 
@@ -209,190 +215,165 @@ class TestBoardSerialization(unittest.TestCase):
 # 4. Full game integration
 # ---------------------------------------------------------------------------
 
+
+def _run_headless_game(port: int) -> tuple[list, dict, bool]:
+    """
+    Spin up a full game over real TCP using HostProtocol / ClientProtocol.
+    Both sides auto-pick the first valid move.
+    Returns (errors, winner_names, timed_out).
+    """
+    errors: list[str] = []
+    winner_names: dict[str, str] = {}
+
+    def run_host():
+        server = Server(port=port)
+        server.start()
+        server.wait_for_client()
+
+        p1 = Player("Host", P1_PATH, "●")
+        p2 = Player("Client", P2_PATH, "●")
+        engine = Engine(p1, p2)
+
+        try:
+            protocol = HostProtocol(
+                server=server,
+                engine=engine,
+                p1=p1,
+                p2=p2,
+                on_my_turn=lambda moves, roll: moves[0],
+                on_state=lambda last_action: None,
+                on_opponent_thinking=lambda: None,
+                on_no_moves=lambda roll: None,
+                on_game_over=lambda name: winner_names.__setitem__("host_side", name),
+            )
+            protocol.run()
+        except Exception as e:
+            errors.append(f"HOST: {e}")
+        finally:
+            server.close()
+
+    def run_client():
+        time.sleep(0.05)
+        p1 = Player("Host", P1_PATH, "●")
+        p2 = Player("Client", P2_PATH, "●")
+        engine = Engine(p1, p2)
+
+        client = Client("127.0.0.1", port=port)
+        client.connect()
+
+        try:
+            protocol = ClientProtocol(
+                client=client,
+                engine=engine,
+                on_rolling=lambda board, roll: None,
+                on_state=lambda board, last_action: None,
+                on_no_moves=lambda board, last_action: None,
+                on_your_turn=lambda board, roll, ids: ids[0],
+                on_game_over=lambda board, name, action: winner_names.__setitem__(
+                    "client_side", name
+                ),
+            )
+            protocol.run()
+        except Exception as e:
+            errors.append(f"CLIENT: {e}")
+        finally:
+            client.close()
+
+    host_t = threading.Thread(target=run_host)
+    client_t = threading.Thread(target=run_client)
+    host_t.start()
+    client_t.start()
+    host_t.join(timeout=30)
+    client_t.join(timeout=30)
+
+    return errors, winner_names, host_t.is_alive() or client_t.is_alive()
+
+
 class TestFullGameIntegration(unittest.TestCase):
     """
-    Headless host + client over real TCP. Both sides auto-pick the first
-    valid move. Verifies the complete message protocol drives a game to
-    completion with correct final board state.
+    Headless host + client over real TCP using HostProtocol / ClientProtocol.
+    Both sides auto-pick the first valid move. Verifies the complete message
+    protocol drives a game to completion with a consistent final board state.
     """
 
-    def _run_game(self, port):
-        errors = []
-        winner_names = {}
-
-        def run_host():
-            server = Server(port=port)
-            server.start()
-            server.wait_for_client()
-
-            p1 = Player("Host", P1_PATH, "●")
-            p2 = Player("Client", P2_PATH, "●")
-            engine = Engine(p1, p2)
-
-            try:
-                while not engine.winner:
-                    roll = engine.roll_dice()
-                    valid_moves = engine.get_valid_moves(roll)
-
-                    if not valid_moves:
-                        engine.switch_player()
-                        server.send({"type": "no_moves", "last_action": "",
-                                     "board": GameUtils.serialize_board(engine)})
-                        continue
-
-                    if engine.current_player == p1:
-                        server.send({"type": "rolling", "roll": roll,
-                                     "board": GameUtils.serialize_board(engine)})
-                        engine.execute_move(valid_moves[0], roll)
-                    else:
-                        server.send({"type": "your_turn", "roll": roll,
-                                     "valid_moves": [p.identifier for p in valid_moves],
-                                     "last_action": "", "board": GameUtils.serialize_board(engine)})
-                        msg = server.recv()
-                        chosen = next(p for p in valid_moves if p.identifier == msg["piece_id"])
-                        engine.execute_move(chosen, roll)
-
-                    msg_type = "game_over" if engine.winner else "state"
-                    server.send({"type": msg_type,
-                                 "winner": engine.winner.name if engine.winner else None,
-                                 "last_action": engine.last_action,
-                                 "board": GameUtils.serialize_board(engine)})
-
-                winner_names["host_side"] = engine.winner.name
-            except Exception as e:
-                errors.append(f"HOST: {e}")
-            finally:
-                server.close()
-
-        def run_client():
-            time.sleep(0.05)
-            p1 = Player("Host", P1_PATH, "●")
-            p2 = Player("Client", P2_PATH, "●")
-            engine = Engine(p1, p2)
-
-            client = Client("127.0.0.1", port=port)
-            client.connect()
-
-            try:
-                while True:
-                    msg = client.recv()
-                    if msg["type"] in ("rolling", "state", "no_moves"):
-                        GameUtils.apply_board(engine, msg["board"])
-                    elif msg["type"] == "your_turn":
-                        GameUtils.apply_board(engine, msg["board"])
-                        valid_moves = [p for p in p2.pieces
-                                       if p.identifier in set(msg["valid_moves"])]
-                        client.send({"type": "move", "piece_id": valid_moves[0].identifier})
-                    elif msg["type"] == "game_over":
-                        GameUtils.apply_board(engine, msg["board"])
-                        winner_names["client_side"] = msg["winner"]
-                        break
-            except Exception as e:
-                errors.append(f"CLIENT: {e}")
-            finally:
-                client.close()
-
-        host_t = threading.Thread(target=run_host)
-        client_t = threading.Thread(target=run_client)
-        host_t.start()
-        client_t.start()
-        host_t.join(timeout=30)
-        client_t.join(timeout=30)
-
-        return errors, winner_names, host_t.is_alive() or client_t.is_alive()
-
     def test_game_completes(self):
-        errors, winner_names, timed_out = self._run_game(get_free_port())
+        errors, winner_names, timed_out = _run_headless_game(get_free_port())
         self.assertFalse(timed_out, "Game did not finish within 30 seconds")
         self.assertEqual(errors, [])
 
     def test_winner_consistent_on_both_sides(self):
-        errors, winner_names, timed_out = self._run_game(get_free_port())
+        errors, winner_names, timed_out = _run_headless_game(get_free_port())
         self.assertFalse(timed_out)
         self.assertEqual(errors, [])
         self.assertEqual(winner_names["host_side"], winner_names["client_side"])
 
     def test_winner_board_state_is_valid(self):
-        """All of the winner's pieces must be at FINISH on the client's board."""
-        errors, winner_names, timed_out = self._run_game(get_free_port())
-        self.assertFalse(timed_out)
-        self.assertEqual(errors, [])
-        # Re-run a quick game and inspect the final engine state directly
+        """All of the winner's pieces must be at FINISH on the host's engine."""
         port = get_free_port()
-        final_engine = {}
+        final: dict = {}
 
         def run_host():
             server = Server(port=port)
             server.start()
             server.wait_for_client()
-            p1 = Player("Host", P1_PATH, "●")
-            p2 = Player("Client", P2_PATH, "●")
-            engine = Engine(p1, p2)
-            while not engine.winner:
-                roll = engine.roll_dice()
-                valid_moves = engine.get_valid_moves(roll)
-                if not valid_moves:
-                    engine.switch_player()
-                    server.send({"type": "no_moves", "last_action": "",
-                                 "board": GameUtils.serialize_board(engine)})
-                    continue
-                if engine.current_player == p1:
-                    server.send({"type": "rolling", "roll": roll,
-                                 "board": GameUtils.serialize_board(engine)})
-                    engine.execute_move(valid_moves[0], roll)
-                else:
-                    server.send({"type": "your_turn", "roll": roll,
-                                 "valid_moves": [p.identifier for p in valid_moves],
-                                 "last_action": "", "board": GameUtils.serialize_board(engine)})
-                    msg = server.recv()
-                    chosen = next(p for p in valid_moves if p.identifier == msg["piece_id"])
-                    engine.execute_move(chosen, roll)
-                msg_type = "game_over" if engine.winner else "state"
-                server.send({"type": msg_type,
-                             "winner": engine.winner.name if engine.winner else None,
-                             "last_action": engine.last_action,
-                             "board": GameUtils.serialize_board(engine)})
-            final_engine["winner"] = engine.winner.name
-            final_engine["p1_done"] = all(p.progress == FINISH for p in p1.pieces)
-            final_engine["p2_done"] = all(p.progress == FINISH for p in p2.pieces)
-            server.close()
 
-        def run_client():
-            time.sleep(0.05)
             p1 = Player("Host", P1_PATH, "●")
             p2 = Player("Client", P2_PATH, "●")
             engine = Engine(p1, p2)
-            client = Client("127.0.0.1", port=port)
-            client.connect()
-            while True:
-                msg = client.recv()
-                if msg["type"] in ("rolling", "state", "no_moves"):
-                    GameUtils.apply_board(engine, msg["board"])
-                elif msg["type"] == "your_turn":
-                    GameUtils.apply_board(engine, msg["board"])
-                    valid_moves = [p for p in p2.pieces
-                                   if p.identifier in set(msg["valid_moves"])]
-                    client.send({"type": "move", "piece_id": valid_moves[0].identifier})
-                elif msg["type"] == "game_over":
-                    GameUtils.apply_board(engine, msg["board"])
-                    break
-            client.close()
+
+            def _on_game_over(name):
+                final["winner"] = name
+                final["p1_done"] = all(p.progress == FINISH for p in p1.pieces)
+                final["p2_done"] = all(p.progress == FINISH for p in p2.pieces)
+
+            try:
+                protocol = HostProtocol(
+                    server=server,
+                    engine=engine,
+                    p1=p1,
+                    p2=p2,
+                    on_my_turn=lambda moves, roll: moves[0],
+                    on_state=lambda last_action: None,
+                    on_opponent_thinking=lambda: None,
+                    on_no_moves=lambda roll: None,
+                    on_game_over=_on_game_over,
+                )
+                protocol.run()
+            finally:
+                server.close()
 
         host_t = threading.Thread(target=run_host)
-        client_t = threading.Thread(target=run_client)
-        host_t.start(); client_t.start()
-        host_t.join(timeout=30); client_t.join(timeout=30)
+        host_t.start()
+        time.sleep(0.05)  # let host bind and listen
 
-        winner = final_engine["winner"]
+        p1 = Player("Host", P1_PATH, "●")
+        p2 = Player("Client", P2_PATH, "●")
+        engine = Engine(p1, p2)
+        client = Client("127.0.0.1", port=port)
+        client.connect()
+
+        ClientProtocol(
+            client=client,
+            engine=engine,
+            on_rolling=lambda board, roll: None,
+            on_state=lambda board, last_action: None,
+            on_no_moves=lambda board, last_action: None,
+            on_your_turn=lambda board, roll, ids: ids[0],
+            on_game_over=lambda board, name, action: None,
+        ).run()
+        client.close()
+        host_t.join(timeout=30)
+
+        winner = final["winner"]
         if winner == "Host":
-            self.assertTrue(final_engine["p1_done"])
+            self.assertTrue(final["p1_done"])
         else:
-            self.assertTrue(final_engine["p2_done"])
+            self.assertTrue(final["p2_done"])
 
     def test_multiple_games_all_complete(self):
         """Run 5 independent games to confirm no flakiness."""
         for _ in range(5):
-            errors, winner_names, timed_out = self._run_game(get_free_port())
+            errors, winner_names, timed_out = _run_headless_game(get_free_port())
             self.assertFalse(timed_out)
             self.assertEqual(errors, [])
             self.assertEqual(winner_names["host_side"], winner_names["client_side"])

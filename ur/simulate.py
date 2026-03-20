@@ -1,8 +1,9 @@
-import time
 import argparse
+import time
 from dataclasses import dataclass
-from ur.ai.environment import UrEnvironment
+
 from ur.ai import bots
+from ur.ai.environment import UrEnvironment
 from ur.cli.board import Board
 from ur.cli.menu import Navigation
 

@@ -1,6 +1,7 @@
 import unittest
 
-from ur.game import Player, Engine, P1_PATH, P2_PATH, ROSETTAS, FINISH
+from ur.game import Engine, Move, Player
+from ur.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
 
 
 def make_game():
@@ -36,25 +37,13 @@ class TestPiece(unittest.TestCase):
         piece.progress = FINISH
         self.assertFalse(piece.is_available)
 
-    def test_target_sets_target_progress_and_coord(self):
+    def test_move_dataclass_fields(self):
         piece = self.p1.pieces[0]
         piece.progress = 3
-        piece.target(2)
-        self.assertEqual(piece.target_progress, 5)
-        self.assertEqual(piece.target_coord, P1_PATH[5])
-
-    def test_move_without_argument_uses_target(self):
-        piece = self.p1.pieces[0]
-        piece.progress = 3
-        piece.target(2)
-        piece.move()
-        self.assertEqual(piece.progress, 5)
-
-    def test_move_with_explicit_target(self):
-        piece = self.p1.pieces[0]
-        piece.progress = 5
-        piece.move(target=0)
-        self.assertEqual(piece.progress, 0)
+        move = Move(piece=piece, target_progress=5, target_coord=P1_PATH[5])
+        self.assertEqual(move.target_progress, 5)
+        self.assertEqual(move.target_coord, P1_PATH[5])
+        self.assertIs(move.piece, piece)
 
 
 class TestPlayer(unittest.TestCase):
@@ -131,7 +120,7 @@ class TestGetStats(unittest.TestCase):
 
     def test_stats_reflect_scored_and_in_play(self):
         self.p1.pieces[0].progress = FINISH
-        self.p1.pieces[1].progress = 5   # in play, not waiting
+        self.p1.pieces[1].progress = 5  # in play, not waiting
         stats = self.game.get_stats()
         self.assertEqual(stats.p1_score, 1)
         self.assertEqual(stats.p1_waiting, 5)  # 7 - 1 scored - 1 in play
@@ -160,23 +149,27 @@ class TestValidMoves(unittest.TestCase):
         self.p1.pieces[0].progress = 2
         # pieces[1] is at 0; roll 2 would land it on progress 2 — blocked
         moves = self.game.get_valid_moves(2)
-        self.assertNotIn(self.p1.pieces[1], moves)
+        move_pieces = [m.piece for m in moves]
+        self.assertNotIn(self.p1.pieces[1], move_pieces)
 
     def test_cannot_overshoot_finish(self):
         self.p1.pieces[0].progress = 14
         # Roll 2 overshoots FINISH (15) — not valid
         moves = self.game.get_valid_moves(2)
-        self.assertNotIn(self.p1.pieces[0], moves)
+        move_pieces = [m.piece for m in moves]
+        self.assertNotIn(self.p1.pieces[0], move_pieces)
 
     def test_exact_roll_to_finish_is_valid(self):
         self.p1.pieces[0].progress = 14
         moves = self.game.get_valid_moves(1)
-        self.assertIn(self.p1.pieces[0], moves)
+        move_pieces = [m.piece for m in moves]
+        self.assertIn(self.p1.pieces[0], move_pieces)
 
     def test_finished_piece_excluded_from_moves(self):
         self.p1.pieces[0].progress = FINISH
         moves = self.game.get_valid_moves(1)
-        self.assertNotIn(self.p1.pieces[0], moves)
+        move_pieces = [m.piece for m in moves]
+        self.assertNotIn(self.p1.pieces[0], move_pieces)
 
     def test_cannot_hit_opponent_on_rosetta(self):
         # Central shared Rosetta is at progress 8 (coord 1,3)
@@ -185,7 +178,8 @@ class TestValidMoves(unittest.TestCase):
         self.game.current_idx = 1  # P2's turn
 
         moves = self.game.get_valid_moves(1)
-        self.assertNotIn(self.p2.pieces[0], moves)
+        move_pieces = [m.piece for m in moves]
+        self.assertNotIn(self.p2.pieces[0], move_pieces)
 
     def test_can_hit_opponent_not_on_rosetta(self):
         # P1 is at progress 5 (shared zone, not a rosetta)
@@ -194,15 +188,17 @@ class TestValidMoves(unittest.TestCase):
         self.game.current_idx = 1  # P2's turn
 
         moves = self.game.get_valid_moves(1)
-        self.assertIn(self.p2.pieces[0], moves)
+        move_pieces = [m.piece for m in moves]
+        self.assertIn(self.p2.pieces[0], move_pieces)
 
     def test_multiple_pieces_can_score_simultaneously(self):
         # Two P1 pieces at 14: both should be valid with roll 1
         self.p1.pieces[0].progress = 14
         self.p1.pieces[1].progress = 14
         moves = self.game.get_valid_moves(1)
-        self.assertIn(self.p1.pieces[0], moves)
-        self.assertIn(self.p1.pieces[1], moves)
+        move_pieces = [m.piece for m in moves]
+        self.assertIn(self.p1.pieces[0], move_pieces)
+        self.assertIn(self.p1.pieces[1], move_pieces)
 
 
 class TestExecuteMove(unittest.TestCase):
@@ -211,14 +207,14 @@ class TestExecuteMove(unittest.TestCase):
 
     def test_move_advances_piece(self):
         piece = self.p1.pieces[0]
-        piece.target(3)
-        self.game.execute_move(piece, 3)
+        move = Move(piece=piece, target_progress=3, target_coord=P1_PATH[3])
+        self.game.execute_move(move, 3)
         self.assertEqual(piece.progress, 3)
 
     def test_move_passes_turn(self):
         piece = self.p1.pieces[0]
-        piece.target(1)
-        self.game.execute_move(piece, 1)
+        move = Move(piece=piece, target_progress=1, target_coord=P1_PATH[1])
+        self.game.execute_move(move, 1)
         self.assertEqual(self.game.current_idx, 1)
 
     def test_hit_opponent_resets_their_piece(self):
@@ -227,8 +223,9 @@ class TestExecuteMove(unittest.TestCase):
         self.p2.pieces[0].progress = 4
         self.game.current_idx = 1
 
-        self.p2.pieces[0].target(1)
-        self.game.execute_move(self.p2.pieces[0], 1)
+        piece = self.p2.pieces[0]
+        move = Move(piece=piece, target_progress=5, target_coord=P2_PATH[5])
+        self.game.execute_move(move, 1)
 
         self.assertEqual(self.p2.pieces[0].progress, 5)
         self.assertEqual(self.p1.pieces[0].progress, 0)
@@ -238,8 +235,9 @@ class TestExecuteMove(unittest.TestCase):
         self.p2.pieces[0].progress = 4
         self.game.current_idx = 1
 
-        self.p2.pieces[0].target(1)
-        self.game.execute_move(self.p2.pieces[0], 1)
+        piece = self.p2.pieces[0]
+        move = Move(piece=piece, target_progress=5, target_coord=P2_PATH[5])
+        self.game.execute_move(move, 1)
 
         self.assertIn("hit opponent", self.game.last_action)
 
@@ -247,8 +245,8 @@ class TestExecuteMove(unittest.TestCase):
         # P1 roll 4 lands on private Rosetta at progress 4 (coord 2,0)
         self.assertIn(P1_PATH[4], ROSETTAS)
         piece = self.p1.pieces[0]
-        piece.target(4)
-        self.game.execute_move(piece, 4)
+        move = Move(piece=piece, target_progress=4, target_coord=P1_PATH[4])
+        self.game.execute_move(move, 4)
         self.assertEqual(self.game.current_idx, 0)  # still P1's turn
 
     def test_shared_rosetta_grants_extra_turn(self):
@@ -256,8 +254,8 @@ class TestExecuteMove(unittest.TestCase):
         self.assertIn(P1_PATH[8], ROSETTAS)
         piece = self.p1.pieces[0]
         piece.progress = 4
-        piece.target(4)
-        self.game.execute_move(piece, 4)
+        move = Move(piece=piece, target_progress=8, target_coord=P1_PATH[8])
+        self.game.execute_move(move, 4)
         self.assertEqual(self.game.current_idx, 0)
 
     def test_scoring_does_not_grant_extra_turn(self):
@@ -265,16 +263,16 @@ class TestExecuteMove(unittest.TestCase):
         # but scoring (progress 15) should NOT grant extra turn
         piece = self.p1.pieces[0]
         piece.progress = 14
-        piece.target(1)
-        self.game.execute_move(piece, 1)
+        move = Move(piece=piece, target_progress=FINISH, target_coord=P1_PATH[FINISH])
+        self.game.execute_move(move, 1)
         self.assertEqual(piece.progress, FINISH)
         self.assertEqual(self.game.current_idx, 1)  # turn passed
 
     def test_scoring_sets_last_action(self):
         piece = self.p1.pieces[0]
         piece.progress = 14
-        piece.target(1)
-        self.game.execute_move(piece, 1)
+        move = Move(piece=piece, target_progress=FINISH, target_coord=P1_PATH[FINISH])
+        self.game.execute_move(move, 1)
         self.assertIn("scored", self.game.last_action)
 
     def test_winning_does_not_switch_player(self):
@@ -283,8 +281,8 @@ class TestExecuteMove(unittest.TestCase):
             piece.progress = FINISH
         last = self.p1.pieces[-1]
         last.progress = 14
-        last.target(1)
-        self.game.execute_move(last, 1)
+        move = Move(piece=last, target_progress=FINISH, target_coord=P1_PATH[FINISH])
+        self.game.execute_move(move, 1)
 
         self.assertTrue(self.p1.has_won())
         # current_idx stays at 0 — no switch after a win

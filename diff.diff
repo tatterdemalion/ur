@@ -1,0 +1,1847 @@
+diff --git a/ur/ai/bots.py b/ur/ai/bots.py
+index 509d213..a4c788e 100644
+--- a/ur/ai/bots.py
++++ b/ur/ai/bots.py
+@@ -1,48 +1,48 @@
+ import random
+-from ur.game import Player, Piece, ROSETTAS
++
++from ur.game import Move, Player
++from ur.rules import FINISH, ROSETTAS
++
+ 
+ class Bot:
+     name = "Bot"
+ 
+-    def choose_move(self, state: dict, valid_moves: list, player: Player) -> Piece:
++    def choose_move(self, state: dict, valid_moves: list, player: Player) -> Move:
+         raise NotImplementedError("Bots must implement their own logic!")
+ 
+ 
+ class RandomBot(Bot):
+     name = "RandomBot"
+ 
+-    def choose_move(self, state: dict, valid_moves: list, player: Player):
++    def choose_move(self, state: dict, valid_moves: list, player: Player) -> Move:
+         return random.choice(valid_moves)
+ 
+ 
+ class GreedyBot(Bot):
+     name = "GreedyBot"
+ 
+-    def choose_move(self, state: dict, valid_moves: list, player: Player):
++    def choose_move(self, state: dict, valid_moves: list, player: Player) -> Move:
+         best_move = valid_moves[0]
+         best_score = -1
+ 
+-        for piece in valid_moves:
+-            target_progress = piece.progress + state["current_roll"]
+-            target_coord = player.path[target_progress]
+-
++        for move in valid_moves:
+             score = 0
+             # Priority 1: Scoring a point
+-            if target_progress == 15:
++            if move.target_progress == FINISH:
+                 score = 1000
+             # Priority 2: Hitting an opponent (Shared zone is progress 5-12)
+-            elif 5 <= target_progress <= 12 and target_progress in state["opp_pieces"]:
++            elif 5 <= move.target_progress <= 12 and move.target_progress in state["opp_pieces"]:
+                 score = 500
+             # Priority 3: Landing on a Rosetta
+-            elif target_coord in ROSETTAS:
++            elif move.target_coord in ROSETTAS:
+                 score = 300
+             # Priority 4: Getting a piece onto the board
+-            elif piece.progress == 0:
++            elif move.piece.progress == 0:
+                 score = 100
+ 
+             if score > best_score:
+                 best_score = score
+-                best_move = piece
++                best_move = move
+ 
+         return best_move
+ 
+@@ -50,46 +50,42 @@ class GreedyBot(Bot):
+ class StrategicBot(Bot):
+     name = "StrategicBot"
+ 
+-    def choose_move(self, state: dict, valid_moves: list, player: Player):
++    def choose_move(self, state: dict, valid_moves: list, player: Player) -> Move:
+         best_move = valid_moves[0]
+-        best_score = -float('inf')
++        best_score = -float("inf")
+ 
+         # The mathematical probability of each dice roll
+-        roll_probs = {1: 4/16, 2: 6/16, 3: 4/16, 4: 1/16}
+-
+-        for piece in valid_moves:
+-            target_progress = piece.progress + state["current_roll"]
+-            target_coord = player.path[target_progress]
++        roll_probs = {1: 4 / 16, 2: 6 / 16, 3: 4 / 16, 4: 1 / 16}
+ 
++        for move in valid_moves:
+             score = 0
+ 
+             # --- 1. REWARDS ---
+-            if target_progress == 15:
++            if move.target_progress == FINISH:
+                 score += 1000  # Always score if possible
+-            elif 5 <= target_progress <= 12 and target_progress in state["opp_pieces"]:
+-                score += 600   # Hit an opponent!
+-            elif target_coord in ROSETTAS:
+-                score += 400   # Safe space + extra turn
+-            elif piece.progress == 0:
+-                score += 50    # Bring a new piece onto the board
++            elif 5 <= move.target_progress <= 12 and move.target_progress in state["opp_pieces"]:
++                score += 600  # Hit an opponent!
++            elif move.target_coord in ROSETTAS:
++                score += 400  # Safe space + extra turn
++            elif move.piece.progress == 0:
++                score += 50  # Bring a new piece onto the board
+             else:
+-                score += target_progress * 2 # Slight reward for pushing pieces forward
++                score += move.target_progress * 2  # Slight reward for pushing pieces forward
+ 
+             # --- 2. PENALTIES (The Smart Part) ---
+             # If we land in the shared combat zone (5-12) and NOT on a Rosetta
+-            if 5 <= target_progress <= 12 and target_coord not in ROSETTAS:
++            if 5 <= move.target_progress <= 12 and move.target_coord not in ROSETTAS:
+                 for opp_pos in state["opp_pieces"]:
+                     # Is the opponent behind us on the track?
+-                    if 0 < opp_pos < target_progress:
+-                        distance = target_progress - opp_pos
++                    if 0 < opp_pos < move.target_progress:
++                        distance = move.target_progress - opp_pos
+                         # Can they hit us on their next turn?
+                         if 1 <= distance <= 4:
+-                            # We multiply the penalty by the exact probability of them rolling that number
+                             danger_penalty = 500 * roll_probs[distance]
+                             score -= danger_penalty
+ 
+             if score > best_score:
+                 best_score = score
+-                best_move = piece
++                best_move = move
+ 
+         return best_move
+diff --git a/ur/ai/environment.py b/ur/ai/environment.py
+index 15ced26..2fbc5ef 100644
+--- a/ur/ai/environment.py
++++ b/ur/ai/environment.py
+@@ -1,4 +1,5 @@
+-from ur.game import Player, Engine, P1_PATH, P2_PATH
++from ur.game import Engine, Player
++from ur.rules import P1_PATH, P2_PATH
+ 
+ 
+ class UrEnvironment:
+@@ -25,7 +26,7 @@ class UrEnvironment:
+         return {
+             "my_pieces": sorted([p.progress for p in active_p.pieces]),
+             "opp_pieces": sorted([p.progress for p in opp_p.pieces]),
+-            "current_roll": self.current_roll
++            "current_roll": self.current_roll,
+         }
+ 
+     def _advance_to_next_decision(self):
+@@ -42,13 +43,13 @@ class UrEnvironment:
+ 
+             if not valid_moves:
+                 # No moves? The environment handles skipping the turn automatically.
+-                self.game.current_idx = 1 - self.game.current_idx
++                self.game.switch_player()
+                 continue
+ 
+             # We found a valid move! Pause and hand control to the bots.
+             return self._get_state(), valid_moves, False, 0
+ 
+-    def step(self, chosen_piece):
++    def step(self, chosen_move):
+         """
+         Takes the bot's chosen piece, executes it, calculates the reward,
+         and fast-forwards to the next decision.
+@@ -58,7 +59,7 @@ class UrEnvironment:
+         scored_before = sum(1 for p in self.game.current_player.pieces if p.progress == 15)
+ 
+         # Execute
+-        self.game.execute_move(chosen_piece, self.current_roll)
++        self.game.execute_move(chosen_move, self.current_roll)
+ 
+         # Calculate intermediate rewards (Great for training RL later)
+         reward = 0
+@@ -68,7 +69,7 @@ class UrEnvironment:
+         if scored_after > scored_before:
+             reward += 10.0  # Big reward for scoring
+         if opp_active_after < opp_active_before:
+-            reward += 5.0   # Medium reward for a hit
++            reward += 5.0  # Medium reward for a hit
+ 
+         # Fast-forward to the next time someone needs to make a choice
+         next_state, next_valid_moves, done, final_reward = self._advance_to_next_decision()
+diff --git a/ur/cli/board.py b/ur/cli/board.py
+index 53b92ef..76a644f 100644
+--- a/ur/cli/board.py
++++ b/ur/cli/board.py
+@@ -1,10 +1,27 @@
+ from typing import Optional
+-from ur.game import Player, Piece, Engine, ROSETTAS, FINISH
+-from ur.cli.constants import *
++
++from ur.cli.constants import (
++    BOARD_COLUMNS,
++    BOARD_ROWS,
++    C_BOARD,
++    C_BOLD_TEXT,
++    C_P1,
++    C_P2,
++    C_RESET,
++    C_ROSETTA,
++    C_TEXT,
++    MISSING_CELLS,
++    NUM_CIRCLES,
++    TEMPLATE,
++)
++from ur.game import Engine, Piece, Player
++from ur.rules import FINISH, ROSETTAS
+ 
+ 
+ class Board:
+-    def __init__(self, engine: Engine, navigation, local_player: Optional[Player] = None, game_name: str = ""):
++    def __init__(
++        self, engine: Engine, navigation, local_player: Optional[Player] = None, game_name: str = ""
++    ):
+         self.engine = engine
+         self.p1, self.p2 = self.engine.players
+         self._local = local_player if local_player is not None else self.p1
+@@ -25,16 +42,19 @@ class Board:
+         bottom, top = self._bottom, self._top
+ 
+         bottom_score = sum(1 for p in bottom.pieces if p.progress == FINISH)
+-        top_score    = sum(1 for p in top.pieces    if p.progress == FINISH)
+-        top_waiting  = sum(1 for p in top.pieces    if p.progress == 0)
+-
+-        top_waiting_line    = f"{C_P2}{' ●' * top_waiting}{C_RESET}"
+-        bottom_waiting_line = " ".join([
+-            f"{C_P1}{self._numbered_piece(piece)}{C_RESET}"
+-            for piece in bottom.pieces if piece.progress == 0
+-        ])
+-
+-        top_line    = f"{C_P2} {top.name} {top_score * '●'} {C_RESET}"
++        top_score = sum(1 for p in top.pieces if p.progress == FINISH)
++        top_waiting = sum(1 for p in top.pieces if p.progress == 0)
++
++        top_waiting_line = f"{C_P2}{' ●' * top_waiting}{C_RESET}"
++        bottom_waiting_line = " ".join(
++            [
++                f"{C_P1}{self._numbered_piece(piece)}{C_RESET}"
++                for piece in bottom.pieces
++                if piece.progress == 0
++            ]
++        )
++
++        top_line = f"{C_P2} {top.name} {top_score * '●'} {C_RESET}"
+         bottom_line = f"{C_P1} {bottom.name} {bottom_score * '●'} {C_RESET}"
+ 
+         board = TEMPLATE.format(**cells)
+@@ -61,7 +81,8 @@ class Board:
+         for r in row_order:
+             for c in range(BOARD_COLUMNS):
+                 coord = (r, c)
+-                if coord in MISSING_CELLS: continue
++                if coord in MISSING_CELLS:
++                    continue
+ 
+                 content = " "
+                 on_rosetta = False
+@@ -75,7 +96,11 @@ class Board:
+ 
+                 for piece in bottom.pieces:
+                     if piece.is_available and piece.coord == coord:
+-                        content = f"{C_ROSETTA}{self._numbered_piece(piece)}{C_BOARD}" if on_rosetta else f"{C_P1}{self._numbered_piece(piece)}{C_BOARD}"
++                        content = (
++                            f"{C_ROSETTA}{self._numbered_piece(piece)}{C_BOARD}"
++                            if on_rosetta
++                            else f"{C_P1}{self._numbered_piece(piece)}{C_BOARD}"
++                        )
+ 
+                 cells[chr(letter_code)] = f" {content} "
+                 letter_code += 1
+@@ -84,5 +109,3 @@ class Board:
+ 
+     def _numbered_piece(self, piece: Piece) -> str:
+         return NUM_CIRCLES[piece.identifier]
+-
+-
+diff --git a/ur/cli/constants.py b/ur/cli/constants.py
+index 85b00f0..5550558 100644
+--- a/ur/cli/constants.py
++++ b/ur/cli/constants.py
+@@ -1,11 +1,11 @@
+ # --- ANSI COLOR CODES ---
+-C_RESET = "\033[0m"        # Resets terminal color back to default
+-C_BOARD = "\033[90m"       # Dark Gray for drawing the grid lines of the board
+-C_P1 = "\033[96m"          # Bright Cyan for Player 1 (You) and your pieces
+-C_P2 = "\033[91m"          # Bright Red for Player 2 (The Bot) and its pieces
+-C_ROSETTA = "\033[93m"     # Bright Yellow for Rosetta squares (✿) and point alerts
+-C_BOLD_TEXT = '\033[1;97m' # 1 for Bold, 97 for Bright White
+-C_TEXT = "\033[97m"        # Bright White for headers, menus, and general UI text
++C_RESET = "\033[0m"  # Resets terminal color back to default
++C_BOARD = "\033[90m"  # Dark Gray for drawing the grid lines of the board
++C_P1 = "\033[96m"  # Bright Cyan for Player 1 (You) and your pieces
++C_P2 = "\033[91m"  # Bright Red for Player 2 (The Bot) and its pieces
++C_ROSETTA = "\033[93m"  # Bright Yellow for Rosetta squares (✿) and point alerts
++C_BOLD_TEXT = "\033[1;97m"  # 1 for Bold, 97 for Bright White
++C_TEXT = "\033[97m"  # Bright White for headers, menus, and general UI text
+ 
+ NUM_CIRCLES = {1: "①", 2: "②", 3: "③", 4: "④", 5: "⑤", 6: "⑥", 7: "⑦"}
+ BOARD_ROWS = 3
+diff --git a/ur/cli/match.py b/ur/cli/match.py
+index 130ed5c..9898871 100644
+--- a/ur/cli/match.py
++++ b/ur/cli/match.py
+@@ -1,17 +1,28 @@
+-import time
+ import socket
++import time
+ from typing import Optional
+-from ur.game import Player, Engine, P1_PATH, P2_PATH
++
+ from ur.ai.bots import Bot
+ from ur.cli.board import Board
+-from ur.cli.constants import *
++from ur.cli.constants import C_BOLD_TEXT, C_P1, C_P2, C_RESET, C_TEXT
++from ur.cli.protocol import ClientProtocol, HostProtocol
+ from ur.cli.utils import GameUtils
+-from ur.network import Server, Client, PORT
+-from ur.saves import SaveFile, save_game, load_save_by_name, list_saves, delete_save, generate_game_name
++from ur.game import Engine, Move, Player
++from ur.network import PORT, Client, Server
++from ur.rules import P1_PATH, P2_PATH
++from ur.saves import (
++    SaveFile,
++    delete_save,
++    generate_game_name,
++    list_saves,
++    load_save_by_name,
++    save_game,
++)
+ 
+ 
+ class Match:
+     """Base class handling common UI, display, and state management for all game modes."""
++
+     def __init__(self, navigation):
+         self.navigation = navigation
+         self.game_name = ""
+@@ -52,7 +63,9 @@ class Match:
+             self.ui.draw()
+         print(f"\nGame Over! {winner_name} took the crown!")
+         self.navigation.print_commands()
+-        self.navigation.check_global_commands(input("\nPress Enter to return to the main menu: ").strip())
++        self.navigation.check_global_commands(
++            input("\nPress Enter to return to the main menu: ").strip()
++        )
+ 
+ 
+ class LocalMatch(Match):
+@@ -79,27 +92,33 @@ class LocalMatch(Match):
+             self.update_display()
+ 
+             player_color = C_P1 if self.engine.current_player == self.p1 else C_P2
+-            turn_text = "Your" if self.engine.current_player == self.p1 else f"{self.engine.current_player.name}'s"
++            turn_text = (
++                "Your"
++                if self.engine.current_player == self.p1
++                else f"{self.engine.current_player.name}'s"
++            )
+             GameUtils.animate_dice(turn_text, player_color, roll)
+ 
+             if not valid_moves:
+                 self.show_message("No valid moves. Turn skipped.", 0)
+-                self.engine.last_action = f"{self.engine.current_player.name} rolled {roll} but had no moves."
++                self.engine.last_action = (
++                    f"{self.engine.current_player.name} rolled {roll} but had no moves."
++                )
+                 self.engine.switch_player()
+                 self.save_state("local")
+                 time.sleep(2.0)
+                 continue
+ 
+             if self.engine.current_player == self.p1:
+-                chosen_piece = GameUtils.get_human_move(valid_moves, roll, self.p2, self.bot.name)
+-                if chosen_piece is None:
++                chosen_move = GameUtils.get_human_move(valid_moves, self.p2, self.bot.name)
++                if chosen_move is None:
+                     return  # Abort to menu
+             else:
+                 time.sleep(1.2)
+-                chosen_piece = GameUtils.get_bot_move(self.bot, self.engine, valid_moves, roll)
++                chosen_move = GameUtils.get_bot_move(self.bot, self.engine, valid_moves, roll)
+                 time.sleep(1.2)
+ 
+-            self.engine.execute_move(chosen_piece, roll)
++            self.engine.execute_move(chosen_move, roll)
+             self.save_state("local")
+ 
+         self.end_game(self.engine.winner.name)
+@@ -164,10 +183,15 @@ class HostMatch(Match):
+             if self.save:
+                 self.engine, self.p1, self.p2 = self.save.restore_engine()
+                 self.save_path = self.save.path
+-                self.server.send({"type": "restore", "board": GameUtils.serialize_board(self.engine),
+-                             "last_action": self.engine.last_action,
+-                             "current_idx": self.engine.current_idx,
+-                             "game_name": self.game_name})
++                self.server.send(
++                    {
++                        "type": "restore",
++                        "board": self.engine.snapshot(),
++                        "last_action": self.engine.last_action,
++                        "current_idx": self.engine.current_idx,
++                        "game_name": self.game_name,
++                    }
++                )
+                 self.show_message(f"{C_P1}Resuming '{self.game_name}'...{C_RESET}", 1.0)
+             else:
+                 self.p1 = Player("You", P1_PATH, "●")
+@@ -177,58 +201,41 @@ class HostMatch(Match):
+ 
+             self.ui = Board(self.engine, self.navigation, game_name=self.game_name)
+ 
+-            while not self.engine.winner:
+-                roll = self.engine.roll_dice()
+-                valid_moves = self.engine.get_valid_moves(roll)
++            def on_my_turn(valid_moves: list, roll: int):
++                self.update_display()
++                GameUtils.animate_dice("Your", C_P1, roll)
++                return GameUtils.get_human_move(valid_moves, self.p2, "Opponent")
+ 
++            def on_state(last_action: str):
++                self.save_state("lan")
+                 self.update_display()
+ 
+-                player_color = C_P1 if self.engine.current_player == self.p1 else C_P2
+-                turn_text = "Your" if self.engine.current_player == self.p1 else "Opponent's"
+-                GameUtils.animate_dice(turn_text, player_color, roll)
+-
+-                if not valid_moves:
+-                    self.server.send({"type": "rolling", "roll": roll,
+-                                 "board": GameUtils.serialize_board(self.engine)})
+-                    self.engine.last_action = f"{self.engine.current_player.name} rolled {roll} but had no moves."
+-                    self.engine.switch_player()
+-                    self.save_state("lan")
+-                    self.server.send({"type": "no_moves", "last_action": self.engine.last_action,
+-                                 "board": GameUtils.serialize_board(self.engine)})
+-                    time.sleep(2.0)
+-                    continue
+-
+-                if self.engine.current_player == self.p1:
+-                    self.server.send({"type": "rolling", "roll": roll,
+-                                 "board": GameUtils.serialize_board(self.engine)})
+-                    chosen_piece = GameUtils.get_human_move(valid_moves, roll, self.p2, "Opponent")
+-                    if chosen_piece is None:
+-                        return  # Abort to menu
+-                else:
+-                    self.server.send({
+-                        "type": "your_turn",
+-                        "roll": roll,
+-                        "valid_moves": [p.identifier for p in valid_moves],
+-                        "last_action": self.engine.last_action,
+-                        "board": GameUtils.serialize_board(self.engine),
+-                    })
+-                    print("Waiting for opponent to move...")
+-                    msg = self.server.recv()
+-                    piece_id = msg["piece_id"]
+-                    chosen_piece = next(p for p in valid_moves if p.identifier == piece_id)
+-
+-                self.engine.execute_move(chosen_piece, roll)
++            def on_opponent_thinking():
++                print("Waiting for opponent to move...")
++
++            def on_no_moves(roll: int):
+                 self.save_state("lan")
++                self.update_display()
++                time.sleep(2.0)
+ 
+-                if self.engine.winner:
+-                    self.server.send({"type": "game_over", "winner": self.engine.winner.name,
+-                                 "last_action": self.engine.last_action,
+-                                 "board": GameUtils.serialize_board(self.engine)})
+-                else:
+-                    self.server.send({"type": "state", "last_action": self.engine.last_action,
+-                                 "board": GameUtils.serialize_board(self.engine)})
++            def on_game_over(winner_name: str):
++                self.end_game(winner_name)
+ 
+-            self.end_game(self.engine.winner.name)
++            # Show the board once before the loop begins
++            self.update_display()
++
++            protocol = HostProtocol(
++                server=self.server,
++                engine=self.engine,
++                p1=self.p1,
++                p2=self.p2,
++                on_my_turn=on_my_turn,
++                on_state=on_state,
++                on_opponent_thinking=on_opponent_thinking,
++                on_no_moves=on_no_moves,
++                on_game_over=on_game_over,
++            )
++            protocol.run()
+ 
+         except (ConnectionError, OSError):
+             self.handle_disconnect()
+@@ -260,50 +267,60 @@ class ClientMatch(Match):
+         try:
+             init = self.client.recv()
+             self.game_name = init.get("game_name", "")
+-            self.ui = Board(self.engine, self.navigation, local_player=self.p2, game_name=self.game_name)
++            self.ui = Board(
++                self.engine, self.navigation, local_player=self.p2, game_name=self.game_name
++            )
+ 
+             if init["type"] == "restore":
+-                GameUtils.apply_board(self.engine, init["board"])
++                self.engine.restore(init["board"])
+                 self.engine.last_action = init["last_action"]
+                 self.engine.current_idx = init["current_idx"]
+                 self.update_display()
+                 self.show_message(f"\n{C_P1}Resuming '{self.game_name}'...{C_RESET}", 1.0)
+ 
+-            while True:
+-                msg = self.client.recv()
+-
+-                if msg["type"] == "rolling":
+-                    GameUtils.apply_board(self.engine, msg["board"])
+-                    self.update_display()
+-                    GameUtils.animate_dice("Opponent's", C_P2, msg["roll"])
+-
+-                elif msg["type"] in ("state", "no_moves"):
+-                    GameUtils.apply_board(self.engine, msg["board"])
+-                    self.engine.last_action = msg["last_action"]
+-                    self.update_display()
+-                    time.sleep(1.2)
+-
+-                elif msg["type"] == "your_turn":
+-                    GameUtils.apply_board(self.engine, msg["board"])
+-                    self.engine.last_action = msg["last_action"]
+-                    roll = msg["roll"]
+-
+-                    valid_move_ids = set(msg["valid_moves"])
+-                    valid_moves = [p for p in self.p2.pieces if p.identifier in valid_move_ids]
+-
+-                    self.update_display()
+-                    GameUtils.animate_dice("Your", C_P1, roll)
+-
+-                    chosen_piece = GameUtils.get_human_move(valid_moves, roll, self.p1, "Host")
+-                    if chosen_piece is None:
+-                        return  # Abort to menu
+-                    self.client.send({"type": "move", "piece_id": chosen_piece.identifier})
+-
+-                elif msg["type"] == "game_over":
+-                    GameUtils.apply_board(self.engine, msg["board"])
+-                    self.engine.last_action = msg["last_action"]
+-                    self.end_game(msg['winner'])
+-                    break
++            def on_rolling(board: dict, roll: int):
++                self.engine.restore(board)
++                self.update_display()
++                GameUtils.animate_dice("Opponent's", C_P2, roll)
++
++            def on_state(board: dict, last_action: str):
++                self.engine.restore(board)
++                self.engine.last_action = last_action
++                self.update_display()
++                time.sleep(1.2)
++
++            def on_no_moves(board: dict, last_action: str):
++                self.engine.restore(board)
++                self.engine.last_action = last_action
++                self.update_display()
++                time.sleep(1.2)
++
++            def on_your_turn(board: dict, roll: int, valid_move_ids: list):
++                self.engine.restore(board)
++                valid_moves = self.engine.get_valid_moves(roll)
++                valid_moves = [m for m in valid_moves if m.piece.identifier in set(valid_move_ids)]
++                self.update_display()
++                GameUtils.animate_dice("Your", C_P1, roll)
++                chosen_move = GameUtils.get_human_move(valid_moves, self.p1, "Host")
++                if chosen_move is None:
++                    return None
++                return chosen_move.piece.identifier
++
++            def on_game_over(board: dict, winner_name: str, last_action: str):
++                self.engine.restore(board)
++                self.engine.last_action = last_action
++                self.end_game(winner_name)
++
++            protocol = ClientProtocol(
++                client=self.client,
++                engine=self.engine,
++                on_rolling=on_rolling,
++                on_state=on_state,
++                on_no_moves=on_no_moves,
++                on_your_turn=on_your_turn,
++                on_game_over=on_game_over,
++            )
++            protocol.run()
+ 
+         except (ConnectionError, OSError):
+             self.handle_disconnect()
+diff --git a/ur/cli/menu.py b/ur/cli/menu.py
+index ddc35b6..e96963c 100644
+--- a/ur/cli/menu.py
++++ b/ur/cli/menu.py
+@@ -1,11 +1,12 @@
++import json
+ import os
+ import sys
+-import json
+ import time
+ from typing import Optional
+-from ur.cli.constants import C_TEXT, C_RESET, C_BOLD_TEXT, C_ROSETTA
+-from ur.cli.match import LocalMatch, HostMatch, ClientMatch
+-from ur.ai.bots import Bot, RandomBot, GreedyBot, StrategicBot
++
++from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
++from ur.cli.constants import C_BOLD_TEXT, C_RESET, C_ROSETTA, C_TEXT
++from ur.cli.match import ClientMatch, HostMatch, LocalMatch
+ from ur.saves import SaveFile, list_saves
+ 
+ 
+@@ -29,7 +30,9 @@ class Session:
+ 
+ 
+ class Navigation:
+-    COMMANDS_HINT = f"{C_TEXT}  (Type 'menu' to return to main menu, 'exit' or 'quit' to quit){C_RESET}"
++    COMMANDS_HINT = (
++        f"{C_TEXT}  (Type 'menu' to return to main menu, 'exit' or 'quit' to quit){C_RESET}"
++    )
+ 
+     @staticmethod
+     def is_exit(s: str) -> bool:
+@@ -85,16 +88,23 @@ class Menu:
+             except ValueError:
+                 pass
+ 
++
+ def show_tutorial():
+     Navigation.clear()
+     print(f"{C_BOLD_TEXT}=== HOW TO PLAY THE ROYAL GAME OF UR ==={C_RESET}\n")
+-    print("1. Objective: Move all 7 of your pieces across the board to the end before your opponent.")
++    print(
++        "1. Objective: Move all 7 of your pieces across the board to the end before your opponent."
++    )
+     print("2. Movement: You roll 4 binary dice each turn, yielding a move of 0 to 4 spaces.")
+     print("3. Stacking: You cannot land on a square occupied by your own piece.")
+     print("4. Combat: Landing on an opponent's piece in the shared middle row 'captures' it,")
+     print("   sending it back off-board to start over.")
+-    print(f"5. Rosettas: Landing on a Rosetta ({C_ROSETTA}✿{C_RESET}) grants an extra turn immediately.")
+-    print("   Additionally, the central Rosetta is a safe haven where your piece cannot be captured.\n")
++    print(
++        f"5. Rosettas: Landing on a Rosetta ({C_ROSETTA}✿{C_RESET}) grants an extra turn immediately."
++    )
++    print(
++        "   Additionally, the central Rosetta is a safe haven where your piece cannot be captured.\n"
++    )
+     Navigation.print_commands()
+     raw = input("\nPress Enter to return to the main menu: ").strip()
+     Navigation.check_global_commands(raw)
+@@ -115,7 +125,9 @@ def _pick_local_save_menu() -> Optional[SaveFile]:
+ 
+ 
+ def _bot_by_name(name: str) -> Optional[Bot]:
+-    return {"RandomBot": RandomBot, "GreedyBot": GreedyBot, "StrategicBot": StrategicBot}.get(name, lambda: None)()
++    return {"RandomBot": RandomBot, "GreedyBot": GreedyBot, "StrategicBot": StrategicBot}.get(
++        name, lambda: None
++    )()
+ 
+ 
+ def select_bot_menu() -> Optional[Bot]:
+@@ -155,7 +167,9 @@ def main_menu():
+             Navigation.clear()
+             print(f"{C_BOLD_TEXT}=== JOIN GAME ==={C_RESET}\n")
+             last_ip = Session.load().get("last_ip", "")
+-            prompt = f"Enter host IP address [{last_ip}]: " if last_ip else "Enter host IP address: "
++            prompt = (
++                f"Enter host IP address [{last_ip}]: " if last_ip else "Enter host IP address: "
++            )
+             Navigation.print_commands()
+             host_ip = input(prompt).strip()
+ 
+diff --git a/ur/cli/utils.py b/ur/cli/utils.py
+index 953c220..ab1031d 100644
+--- a/ur/cli/utils.py
++++ b/ur/cli/utils.py
+@@ -1,77 +1,64 @@
++import random
+ import sys
+ import time
+-import random
+ from typing import Optional
+ 
+-from ur.game import Player, Piece, Engine, ROSETTAS
+-from ur.cli.constants import C_P1, C_P2, C_ROSETTA, C_RESET, NUM_CIRCLES
+ from ur.ai.bots import Bot
++from ur.cli.constants import C_P1, C_P2, C_RESET, C_ROSETTA, NUM_CIRCLES
++from ur.game import Engine, Move, Player
++from ur.rules import FINISH, ROSETTAS
+ 
+ 
+ class GameUtils:
+-    @staticmethod
+-    def serialize_board(engine: Engine) -> dict:
+-        stats = engine.get_stats()
+-        return {
+-            "p1_pieces": {str(p.identifier): p.progress for p in engine.p1.pieces},
+-            "p2_pieces": {str(p.identifier): p.progress for p in engine.p2.pieces},
+-            "stats": {
+-                "p1_score": stats.p1_score, "p1_waiting": stats.p1_waiting,
+-                "p2_score": stats.p2_score, "p2_waiting": stats.p2_waiting,
+-            },
+-        }
+-
+-    @staticmethod
+-    def apply_board(engine: Engine, board: dict):
+-        for piece in engine.p1.pieces:
+-            piece.progress = board["p1_pieces"][str(piece.identifier)]
+-        for piece in engine.p2.pieces:
+-            piece.progress = board["p2_pieces"][str(piece.identifier)]
+-
+     @staticmethod
+     def animate_dice(turn_text: str, player_color: str, roll: int):
+         for _ in range(12):
+             random_dots = " ".join(random.choice(["●", "○"]) for _ in range(4))
+-            sys.stdout.write(f"\r{turn_text} turn. Rolling...  [{player_color}{random_dots}{C_RESET}]")
++            sys.stdout.write(
++                f"\r{turn_text} turn. Rolling...  [{player_color}{random_dots}{C_RESET}]"
++            )
+             sys.stdout.flush()
+             time.sleep(0.06)
+ 
+         final_faces = ["●"] * roll + ["○"] * (4 - roll)
+         random.shuffle(final_faces)
+         final_str = " ".join(final_faces)
+-        sys.stdout.write(f"\r{turn_text} turn. Rolled {roll}! [{player_color}{final_str}{C_RESET}]" + " " * 10 + "\n\n")
++        sys.stdout.write(
++            f"\r{turn_text} turn. Rolled {roll}! [{player_color}{final_str}{C_RESET}]"
++            + " " * 10
++            + "\n\n"
++        )
+         sys.stdout.flush()
+ 
+     @staticmethod
+-    def build_move_hints(piece: Piece, roll: int, p2: Player, bot_name: str) -> str:
+-        target = piece.progress + roll
+-        target_coord = piece.player.path[target]
++    def build_move_hints(move: Move, p2: Player, bot_name: str) -> str:
+         hints = []
+ 
+-        if target == 15:
++        if move.target_progress == FINISH:
+             hints.append(f"{C_ROSETTA}Scores a point!{C_RESET}")
+-        elif target_coord in ROSETTAS:
++        elif move.target_coord in ROSETTAS:
+             hints.append(f"{C_ROSETTA}Lands on Rosetta (Roll again!){C_RESET}")
+ 
+-        if target_coord is not None:
++        if move.target_coord is not None:
+             for opp_piece in p2.pieces:
+-                if opp_piece.is_available and opp_piece.coord == target_coord:
++                if opp_piece.is_available and opp_piece.coord == move.target_coord:
+                     hints.append(f"{C_P2}Captures {bot_name}'s piece!{C_RESET}")
+ 
+         return f" — {' '.join(hints)}" if hints else ""
+ 
+     @classmethod
+-    def get_human_move(cls, valid_moves: list[Piece], roll: int, p2: Player, bot_name: str) -> Optional[Piece]:
++    def get_human_move(cls, valid_moves: list, p2: Player, bot_name: str) -> Optional[Move]:
+         from ur.cli.menu import Navigation
+ 
+         print("Your options:")
+-        valid_moves.sort(key=lambda p: p.identifier)
++        valid_moves.sort(key=lambda m: m.piece.identifier)
+ 
+-        for piece in valid_moves:
+-            target = piece.progress + roll
+-            status = "Off-board" if piece.progress == 0 else f"Square {piece.progress}"
+-            hint_text = cls.build_move_hints(piece, roll, p2, bot_name)
+-            print(f"  {C_P1}{NUM_CIRCLES[piece.identifier]}{C_RESET} : {status} -> Square {target}{hint_text}")
++        for move in valid_moves:
++            status = "Off-board" if move.piece.progress == 0 else f"Square {move.piece.progress}"
++            hint_text = cls.build_move_hints(move, p2, bot_name)
++            print(
++                f"  {C_P1}{NUM_CIRCLES[move.piece.identifier]}{C_RESET} : {status} -> Square {move.target_progress}{hint_text}"
++            )
+ 
+         Navigation.print_commands()
+         while True:
+@@ -82,7 +69,7 @@ class GameUtils:
+ 
+             try:
+                 choice = int(raw_input)
+-                chosen = next((p for p in valid_moves if p.identifier == choice), None)
++                chosen = next((m for m in valid_moves if m.piece.identifier == choice), None)
+                 if chosen:
+                     return chosen
+                 print("Invalid choice. That piece cannot move right now.")
+@@ -90,7 +77,7 @@ class GameUtils:
+                 print("Please enter a valid piece number.")
+ 
+     @staticmethod
+-    def get_bot_move(bot: Bot, engine: Engine, valid_moves: list[Piece], roll: int) -> Piece:
++    def get_bot_move(bot: Bot, engine: Engine, valid_moves: list, roll: int) -> Move:
+         state = {
+             "my_pieces": sorted([p.progress for p in engine.current_player.pieces]),
+             "opp_pieces": sorted([p.progress for p in engine.opponent.pieces]),
+diff --git a/ur/game.py b/ur/game.py
+index 7b8838e..25eb2aa 100644
+--- a/ur/game.py
++++ b/ur/game.py
+@@ -2,22 +2,21 @@ import random
+ from dataclasses import dataclass
+ from typing import Optional
+ 
+-# --- 1. THE BOARD GEOMETRY ---
+-P1_PATH = {
+-    0: None, 1: (2, 3), 2: (2, 2), 3: (2, 1), 4: (2, 0),
+-    5: (1, 0), 6: (1, 1), 7: (1, 2), 8: (1, 3), 9: (1, 4), 10: (1, 5), 11: (1, 6), 12: (1, 7),
+-    13: (2, 7), 14: (2, 6), 15: None
+-}
+-
+-P2_PATH = {
+-    0: None, 1: (0, 3), 2: (0, 2), 3: (0, 1), 4: (0, 0),
+-    5: (1, 0), 6: (1, 1), 7: (1, 2), 8: (1, 3), 9: (1, 4), 10: (1, 5), 11: (1, 6), 12: (1, 7),
+-    13: (0, 7), 14: (0, 6), 15: None
+-}
+-
+-ROSETTAS = {(0, 0), (2, 0), (1, 3), (0, 6), (2, 6)}
+-FINAL_SQUARE = 14
+-FINISH = 15
++from ur.rules import FINAL_SQUARE, FINISH, P1_PATH, P2_PATH, ROSETTAS
++
++# Re-export so existing imports of geometry from ur.game continue to work.
++__all__ = [
++    "FINAL_SQUARE",
++    "FINISH",
++    "P1_PATH",
++    "P2_PATH",
++    "ROSETTAS",
++    "Engine",
++    "Move",
++    "Piece",
++    "Player",
++    "Stats",
++]
+ 
+ 
+ @dataclass
+@@ -34,8 +33,6 @@ class Piece:
+         self.identifier = identifier
+         self.player = player
+         self.progress = 0
+-        self.target_progress = 0
+-        self.target_coord = None
+ 
+     @property
+     def coord(self):
+@@ -45,16 +42,12 @@ class Piece:
+     def is_available(self):
+         return 0 <= self.progress < FINISH
+ 
+-    def target(self, roll:int) -> "Piece":
+-        self.target_progress = self.progress + roll
+-        self.target_coord = self.player.path.get(self.target_progress)
+-        return self
+ 
+-    def move(self, target: Optional[int] = None):
+-        if target is not None:
+-            self.progress = target
+-        else:
+-            self.progress = self.target_progress
++@dataclass
++class Move:
++    piece: "Piece"
++    target_progress: int
++    target_coord: Optional[tuple]
+ 
+ 
+ class Player:
+@@ -96,6 +89,27 @@ class Engine:
+                 return player
+         return None
+ 
++    def snapshot(self) -> dict:
++        """Serialize piece positions to a JSON-safe dict for network/save use."""
++        stats = self.get_stats()
++        return {
++            "p1_pieces": {str(p.identifier): p.progress for p in self.p1.pieces},
++            "p2_pieces": {str(p.identifier): p.progress for p in self.p2.pieces},
++            "stats": {
++                "p1_score": stats.p1_score,
++                "p1_waiting": stats.p1_waiting,
++                "p2_score": stats.p2_score,
++                "p2_waiting": stats.p2_waiting,
++            },
++        }
++
++    def restore(self, board: dict):
++        """Apply a snapshot dict back onto this engine's piece positions."""
++        for piece in self.p1.pieces:
++            piece.progress = board["p1_pieces"][str(piece.identifier)]
++        for piece in self.p2.pieces:
++            piece.progress = board["p2_pieces"][str(piece.identifier)]
++
+     def get_stats(self) -> Stats:
+         return Stats(
+             p1_score=sum(1 for p in self.p1.pieces if p.progress == FINISH),
+@@ -111,57 +125,65 @@ class Engine:
+     def roll_dice(self) -> int:
+         return sum(random.getrandbits(1) for _ in range(4))
+ 
+-    def get_valid_moves(self, roll: int) -> list[Piece]:
++    def get_valid_moves(self, roll: int) -> list[Move]:
+         if roll == 0:
+             return []
+ 
+         current_occupied = {p.progress for p in self.current_player.pieces if p.progress < FINISH}
+-        opponent_safe = {p.coord for p in self.opponent.pieces if p.is_available and p.coord in ROSETTAS}
++        opponent_safe = {
++            p.coord for p in self.opponent.pieces if p.is_available and p.coord in ROSETTAS
++        }
+ 
+         valid_moves = []
+ 
+         for piece in self.current_player.pieces:
+-            piece.target(roll)
+-
+             # Rule A: Piece is already done
+             if not piece.is_available:
+                 continue
+ 
++            target_progress = piece.progress + roll
++
+             # Rule B: Needs exact roll to score
+-            if piece.target_progress > FINISH:
++            if target_progress > FINISH:
+                 continue
+ 
+             # Rule C: Cannot land on your own piece
+-            if piece.target_progress in current_occupied:
++            if target_progress in current_occupied:
+                 continue
+ 
++            target_coord = self.current_player.path.get(target_progress)
++
+             # Rule D: Cannot hit an opponent on a Rosetta
+-            if piece.target_coord in opponent_safe:
++            if target_coord in opponent_safe:
+                 continue
+ 
+-            valid_moves.append(piece)
++            valid_moves.append(
++                Move(piece=piece, target_progress=target_progress, target_coord=target_coord)
++            )
+ 
+         return valid_moves
+ 
+-    def execute_move(self, piece: Piece, roll: int):
++    def execute_move(self, move: Move, roll: int):
+         state = "moved"
+-        roll_again = piece.target_coord in ROSETTAS and piece.target_progress < FINISH
++        roll_again = move.target_coord in ROSETTAS and move.target_progress < FINISH
+ 
+         # Check for hit
+-        if piece.target_coord is not None:
++        if move.target_coord is not None:
+             for opp_piece in self.opponent.pieces:
+-                if opp_piece.coord == piece.target_coord and opp_piece.is_available:
+-                    opp_piece.move(target=0)
++                if opp_piece.coord == move.target_coord and opp_piece.is_available:
++                    opp_piece.progress = 0
+                     state = "hit opponent"
+                     break
+ 
+-        piece.move()
++        move.piece.progress = move.target_progress
+ 
+-        if piece.progress == FINISH:
++        if move.piece.progress == FINISH:
+             state = "scored"
+             roll_again = False
+ 
+-        self.last_action = f"{self.current_player.name} rolled {roll}: {piece.identifier} {state}."
++        self.last_action = (
++            f"{self.current_player.name} rolled {roll}: {move.piece.identifier} {state}."
++        )
+ 
+         if self.current_player.has_won():
+             pass
+diff --git a/ur/network.py b/ur/network.py
+index f9ece90..81a88fd 100644
+--- a/ur/network.py
++++ b/ur/network.py
+@@ -16,7 +16,6 @@ Message types (client -> server):
+ import json
+ import socket
+ 
+-
+ HOST = "0.0.0.0"
+ PORT = 55378
+ BUFFER = 4096
+diff --git a/ur/play.py b/ur/play.py
+index 98a25d3..1d487c8 100644
+--- a/ur/play.py
++++ b/ur/play.py
+@@ -1,5 +1,4 @@
+ from ur.cli.play import run
+ 
+-
+ if __name__ == "__main__":
+     run()
+diff --git a/ur/saves.py b/ur/saves.py
+index cbed1f8..2560690 100644
+--- a/ur/saves.py
++++ b/ur/saves.py
+@@ -1,38 +1,79 @@
++import datetime
+ import json
+ import os
+ import random
+-import datetime
+ from dataclasses import dataclass
+ from typing import Optional
+ 
+-from ur.game import Player, Engine, P1_PATH, P2_PATH
++from ur.game import Engine, Player
++from ur.rules import P1_PATH, P2_PATH
+ 
+ SAVES_DIR = os.path.join(os.path.dirname(__file__), "..", "saves")
+ 
+-import random
+ 
+ _ADJECTIVES = [
+-    "Sunbaked", "Cursed", "Divine", "Fallen", "Golden",
+-    "Brazen", "Exiled", "Sacred", "Forgotten", "Ruthless",
+-    "Astral", "Ancient", "Royal", "Dusty", "Reckless"
++    "Sunbaked",
++    "Cursed",
++    "Divine",
++    "Fallen",
++    "Golden",
++    "Brazen",
++    "Exiled",
++    "Sacred",
++    "Forgotten",
++    "Ruthless",
++    "Astral",
++    "Ancient",
++    "Royal",
++    "Dusty",
++    "Reckless",
+ ]
+ 
+ _MATERIALS = [
+-    "Bronze", "Lapis", "Mudbrick", "Clay", "Obsidian",
+-    "Copper", "Ivory", "Silver", "Reed", "Cedar"
++    "Bronze",
++    "Lapis",
++    "Mudbrick",
++    "Clay",
++    "Obsidian",
++    "Copper",
++    "Ivory",
++    "Silver",
++    "Reed",
++    "Cedar",
+ ]
+ 
+ _NOUNS = [
+-    "Ziggurat", "Tablet", "Chariot", "Priestess", "Scribe",
+-    "King", "Oracle", "Nomad", "Idol", "Relic",
+-    "River", "Flood", "Dagger", "Tomb", "Crown"
++    "Ziggurat",
++    "Tablet",
++    "Chariot",
++    "Priestess",
++    "Scribe",
++    "King",
++    "Oracle",
++    "Nomad",
++    "Idol",
++    "Relic",
++    "River",
++    "Flood",
++    "Dagger",
++    "Tomb",
++    "Crown",
+ ]
+ 
+ _CITIES = [
+-    "Ur", "Uruk", "Babylon", "Akkad", "Nippur",
+-    "Eridu", "Lagash", "Sumer", "Kish", "Nineveh"
++    "Ur",
++    "Uruk",
++    "Babylon",
++    "Akkad",
++    "Nippur",
++    "Eridu",
++    "Lagash",
++    "Sumer",
++    "Kish",
++    "Nineveh",
+ ]
+ 
++
+ def generate_game_name() -> str:
+     """Generates a thematic Mesopotamian save game name."""
+ 
+@@ -40,15 +81,12 @@ def generate_game_name() -> str:
+     patterns = [
+         # Example: Cursed_Ziggurat
+         lambda: f"{random.choice(_ADJECTIVES)}_{random.choice(_NOUNS)}",
+-
+         # Example: Lapis_Chariot
+         lambda: f"{random.choice(_MATERIALS)}_{random.choice(_NOUNS)}",
+-
+         # Example: Priestess_of_Uruk
+         lambda: f"{random.choice(_NOUNS)}_of_{random.choice(_CITIES)}",
+-
+         # Example: Ur_Nomad
+-        lambda: f"{random.choice(_CITIES)}_{random.choice(_NOUNS)}"
++        lambda: f"{random.choice(_CITIES)}_{random.choice(_NOUNS)}",
+     ]
+ 
+     return random.choice(patterns)()
+@@ -63,12 +101,12 @@ def game_name_to_path(name: str) -> str:
+ class SaveFile:
+     path: str
+     game_name: str
+-    mode: str          # "local" | "lan"
++    mode: str  # "local" | "lan"
+     p1_name: str
+     p2_name: str
+     current_idx: int
+     last_action: str
+-    p1_pieces: dict    # str(identifier) -> progress
++    p1_pieces: dict  # str(identifier) -> progress
+     p2_pieces: dict
+     started_at: str
+     saved_at: str
+diff --git a/ur/simulate.py b/ur/simulate.py
+index 71e5d23..318daa5 100644
+--- a/ur/simulate.py
++++ b/ur/simulate.py
+@@ -1,8 +1,9 @@
+-import time
+ import argparse
++import time
+ from dataclasses import dataclass
+-from ur.ai.environment import UrEnvironment
++
+ from ur.ai import bots
++from ur.ai.environment import UrEnvironment
+ from ur.cli.board import Board
+ from ur.cli.menu import Navigation
+ 
+diff --git a/ur/tests/test_engine.py b/ur/tests/test_engine.py
+index 45dfe2e..0405c9c 100644
+--- a/ur/tests/test_engine.py
++++ b/ur/tests/test_engine.py
+@@ -1,6 +1,7 @@
+ import unittest
+ 
+-from ur.game import Player, Engine, P1_PATH, P2_PATH, ROSETTAS, FINISH
++from ur.game import Engine, Move, Player
++from ur.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
+ 
+ 
+ def make_game():
+@@ -36,25 +37,13 @@ class TestPiece(unittest.TestCase):
+         piece.progress = FINISH
+         self.assertFalse(piece.is_available)
+ 
+-    def test_target_sets_target_progress_and_coord(self):
++    def test_move_dataclass_fields(self):
+         piece = self.p1.pieces[0]
+         piece.progress = 3
+-        piece.target(2)
+-        self.assertEqual(piece.target_progress, 5)
+-        self.assertEqual(piece.target_coord, P1_PATH[5])
+-
+-    def test_move_without_argument_uses_target(self):
+-        piece = self.p1.pieces[0]
+-        piece.progress = 3
+-        piece.target(2)
+-        piece.move()
+-        self.assertEqual(piece.progress, 5)
+-
+-    def test_move_with_explicit_target(self):
+-        piece = self.p1.pieces[0]
+-        piece.progress = 5
+-        piece.move(target=0)
+-        self.assertEqual(piece.progress, 0)
++        move = Move(piece=piece, target_progress=5, target_coord=P1_PATH[5])
++        self.assertEqual(move.target_progress, 5)
++        self.assertEqual(move.target_coord, P1_PATH[5])
++        self.assertIs(move.piece, piece)
+ 
+ 
+ class TestPlayer(unittest.TestCase):
+@@ -131,7 +120,7 @@ class TestGetStats(unittest.TestCase):
+ 
+     def test_stats_reflect_scored_and_in_play(self):
+         self.p1.pieces[0].progress = FINISH
+-        self.p1.pieces[1].progress = 5   # in play, not waiting
++        self.p1.pieces[1].progress = 5  # in play, not waiting
+         stats = self.game.get_stats()
+         self.assertEqual(stats.p1_score, 1)
+         self.assertEqual(stats.p1_waiting, 5)  # 7 - 1 scored - 1 in play
+@@ -160,23 +149,27 @@ class TestValidMoves(unittest.TestCase):
+         self.p1.pieces[0].progress = 2
+         # pieces[1] is at 0; roll 2 would land it on progress 2 — blocked
+         moves = self.game.get_valid_moves(2)
+-        self.assertNotIn(self.p1.pieces[1], moves)
++        move_pieces = [m.piece for m in moves]
++        self.assertNotIn(self.p1.pieces[1], move_pieces)
+ 
+     def test_cannot_overshoot_finish(self):
+         self.p1.pieces[0].progress = 14
+         # Roll 2 overshoots FINISH (15) — not valid
+         moves = self.game.get_valid_moves(2)
+-        self.assertNotIn(self.p1.pieces[0], moves)
++        move_pieces = [m.piece for m in moves]
++        self.assertNotIn(self.p1.pieces[0], move_pieces)
+ 
+     def test_exact_roll_to_finish_is_valid(self):
+         self.p1.pieces[0].progress = 14
+         moves = self.game.get_valid_moves(1)
+-        self.assertIn(self.p1.pieces[0], moves)
++        move_pieces = [m.piece for m in moves]
++        self.assertIn(self.p1.pieces[0], move_pieces)
+ 
+     def test_finished_piece_excluded_from_moves(self):
+         self.p1.pieces[0].progress = FINISH
+         moves = self.game.get_valid_moves(1)
+-        self.assertNotIn(self.p1.pieces[0], moves)
++        move_pieces = [m.piece for m in moves]
++        self.assertNotIn(self.p1.pieces[0], move_pieces)
+ 
+     def test_cannot_hit_opponent_on_rosetta(self):
+         # Central shared Rosetta is at progress 8 (coord 1,3)
+@@ -185,7 +178,8 @@ class TestValidMoves(unittest.TestCase):
+         self.game.current_idx = 1  # P2's turn
+ 
+         moves = self.game.get_valid_moves(1)
+-        self.assertNotIn(self.p2.pieces[0], moves)
++        move_pieces = [m.piece for m in moves]
++        self.assertNotIn(self.p2.pieces[0], move_pieces)
+ 
+     def test_can_hit_opponent_not_on_rosetta(self):
+         # P1 is at progress 5 (shared zone, not a rosetta)
+@@ -194,15 +188,17 @@ class TestValidMoves(unittest.TestCase):
+         self.game.current_idx = 1  # P2's turn
+ 
+         moves = self.game.get_valid_moves(1)
+-        self.assertIn(self.p2.pieces[0], moves)
++        move_pieces = [m.piece for m in moves]
++        self.assertIn(self.p2.pieces[0], move_pieces)
+ 
+     def test_multiple_pieces_can_score_simultaneously(self):
+         # Two P1 pieces at 14: both should be valid with roll 1
+         self.p1.pieces[0].progress = 14
+         self.p1.pieces[1].progress = 14
+         moves = self.game.get_valid_moves(1)
+-        self.assertIn(self.p1.pieces[0], moves)
+-        self.assertIn(self.p1.pieces[1], moves)
++        move_pieces = [m.piece for m in moves]
++        self.assertIn(self.p1.pieces[0], move_pieces)
++        self.assertIn(self.p1.pieces[1], move_pieces)
+ 
+ 
+ class TestExecuteMove(unittest.TestCase):
+@@ -211,14 +207,14 @@ class TestExecuteMove(unittest.TestCase):
+ 
+     def test_move_advances_piece(self):
+         piece = self.p1.pieces[0]
+-        piece.target(3)
+-        self.game.execute_move(piece, 3)
++        move = Move(piece=piece, target_progress=3, target_coord=P1_PATH[3])
++        self.game.execute_move(move, 3)
+         self.assertEqual(piece.progress, 3)
+ 
+     def test_move_passes_turn(self):
+         piece = self.p1.pieces[0]
+-        piece.target(1)
+-        self.game.execute_move(piece, 1)
++        move = Move(piece=piece, target_progress=1, target_coord=P1_PATH[1])
++        self.game.execute_move(move, 1)
+         self.assertEqual(self.game.current_idx, 1)
+ 
+     def test_hit_opponent_resets_their_piece(self):
+@@ -227,8 +223,9 @@ class TestExecuteMove(unittest.TestCase):
+         self.p2.pieces[0].progress = 4
+         self.game.current_idx = 1
+ 
+-        self.p2.pieces[0].target(1)
+-        self.game.execute_move(self.p2.pieces[0], 1)
++        piece = self.p2.pieces[0]
++        move = Move(piece=piece, target_progress=5, target_coord=P2_PATH[5])
++        self.game.execute_move(move, 1)
+ 
+         self.assertEqual(self.p2.pieces[0].progress, 5)
+         self.assertEqual(self.p1.pieces[0].progress, 0)
+@@ -238,8 +235,9 @@ class TestExecuteMove(unittest.TestCase):
+         self.p2.pieces[0].progress = 4
+         self.game.current_idx = 1
+ 
+-        self.p2.pieces[0].target(1)
+-        self.game.execute_move(self.p2.pieces[0], 1)
++        piece = self.p2.pieces[0]
++        move = Move(piece=piece, target_progress=5, target_coord=P2_PATH[5])
++        self.game.execute_move(move, 1)
+ 
+         self.assertIn("hit opponent", self.game.last_action)
+ 
+@@ -247,8 +245,8 @@ class TestExecuteMove(unittest.TestCase):
+         # P1 roll 4 lands on private Rosetta at progress 4 (coord 2,0)
+         self.assertIn(P1_PATH[4], ROSETTAS)
+         piece = self.p1.pieces[0]
+-        piece.target(4)
+-        self.game.execute_move(piece, 4)
++        move = Move(piece=piece, target_progress=4, target_coord=P1_PATH[4])
++        self.game.execute_move(move, 4)
+         self.assertEqual(self.game.current_idx, 0)  # still P1's turn
+ 
+     def test_shared_rosetta_grants_extra_turn(self):
+@@ -256,8 +254,8 @@ class TestExecuteMove(unittest.TestCase):
+         self.assertIn(P1_PATH[8], ROSETTAS)
+         piece = self.p1.pieces[0]
+         piece.progress = 4
+-        piece.target(4)
+-        self.game.execute_move(piece, 4)
++        move = Move(piece=piece, target_progress=8, target_coord=P1_PATH[8])
++        self.game.execute_move(move, 4)
+         self.assertEqual(self.game.current_idx, 0)
+ 
+     def test_scoring_does_not_grant_extra_turn(self):
+@@ -265,16 +263,16 @@ class TestExecuteMove(unittest.TestCase):
+         # but scoring (progress 15) should NOT grant extra turn
+         piece = self.p1.pieces[0]
+         piece.progress = 14
+-        piece.target(1)
+-        self.game.execute_move(piece, 1)
++        move = Move(piece=piece, target_progress=FINISH, target_coord=P1_PATH[FINISH])
++        self.game.execute_move(move, 1)
+         self.assertEqual(piece.progress, FINISH)
+         self.assertEqual(self.game.current_idx, 1)  # turn passed
+ 
+     def test_scoring_sets_last_action(self):
+         piece = self.p1.pieces[0]
+         piece.progress = 14
+-        piece.target(1)
+-        self.game.execute_move(piece, 1)
++        move = Move(piece=piece, target_progress=FINISH, target_coord=P1_PATH[FINISH])
++        self.game.execute_move(move, 1)
+         self.assertIn("scored", self.game.last_action)
+ 
+     def test_winning_does_not_switch_player(self):
+@@ -283,8 +281,8 @@ class TestExecuteMove(unittest.TestCase):
+             piece.progress = FINISH
+         last = self.p1.pieces[-1]
+         last.progress = 14
+-        last.target(1)
+-        self.game.execute_move(last, 1)
++        move = Move(piece=last, target_progress=FINISH, target_coord=P1_PATH[FINISH])
++        self.game.execute_move(move, 1)
+ 
+         self.assertTrue(self.p1.has_won())
+         # current_idx stays at 0 — no switch after a win
+diff --git a/ur/tests/test_network.py b/ur/tests/test_network.py
+index 179c4ef..c1df8a2 100644
+--- a/ur/tests/test_network.py
++++ b/ur/tests/test_network.py
+@@ -2,13 +2,15 @@ import threading
+ import time
+ import unittest
+ 
+-from ur.game import Player, Engine, P1_PATH, P2_PATH, FINISH
+-from ur.network import Connection, Server, Client
+-from ur.cli.utils import GameUtils
++from ur.cli.protocol import ClientProtocol, HostProtocol
++from ur.game import Engine, Player
++from ur.network import Client, Connection, Server
++from ur.rules import FINISH, P1_PATH, P2_PATH
+ 
+ 
+ def get_free_port():
+     import socket
++
+     with socket.socket() as s:
+         s.bind(("", 0))
+         return s.getsockname()[1]
+@@ -18,6 +20,7 @@ def get_free_port():
+ # Helpers
+ # ---------------------------------------------------------------------------
+ 
++
+ def make_connected_pair(port):
+     """Return (server, client) both connected, server has accepted."""
+     server = Server(port=port)
+@@ -42,11 +45,13 @@ def make_connected_pair(port):
+ # 1. Protocol layer (Connection)
+ # ---------------------------------------------------------------------------
+ 
++
+ class TestConnection(unittest.TestCase):
+     """Low-level send/recv over a real socket pair."""
+ 
+     def setUp(self):
+         import socket
++
+         self.port = get_free_port()
+         # Build a raw socket pair via a temporary listener
+         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+@@ -112,8 +117,8 @@ class TestConnection(unittest.TestCase):
+ # 2. Server / Client API
+ # ---------------------------------------------------------------------------
+ 
+-class TestServerClient(unittest.TestCase):
+ 
++class TestServerClient(unittest.TestCase):
+     def setUp(self):
+         self.port = get_free_port()
+         self.server, self.client = make_connected_pair(self.port)
+@@ -161,8 +166,8 @@ class TestServerClient(unittest.TestCase):
+ # 3. Board serialization helpers
+ # ---------------------------------------------------------------------------
+ 
+-class TestBoardSerialization(unittest.TestCase):
+ 
++class TestBoardSerialization(unittest.TestCase):
+     def _make_engine(self):
+         p1 = Player("P1", P1_PATH, "●")
+         p2 = Player("P2", P2_PATH, "●")
+@@ -171,7 +176,7 @@ class TestBoardSerialization(unittest.TestCase):
+     def test_roundtrip_all_at_start(self):
+         engine, _, _ = self._make_engine()
+         engine2, _, _ = self._make_engine()
+-        GameUtils.apply_board(engine2, GameUtils.serialize_board(engine))
++        engine2.restore(engine.snapshot())
+         for p in engine2.p1.pieces:
+             self.assertEqual(p.progress, 0)
+         for p in engine2.p2.pieces:
+@@ -185,7 +190,7 @@ class TestBoardSerialization(unittest.TestCase):
+         p2.pieces[6].progress = FINISH
+ 
+         engine2, _, _ = self._make_engine()
+-        GameUtils.apply_board(engine2, GameUtils.serialize_board(engine))
++        engine2.restore(engine.snapshot())
+ 
+         self.assertEqual(engine2.p1.pieces[0].progress, 5)
+         self.assertEqual(engine2.p1.pieces[3].progress, 12)
+@@ -195,13 +200,14 @@ class TestBoardSerialization(unittest.TestCase):
+     def test_roundtrip_via_json(self):
+         """Simulate actual network transit (keys become strings after JSON)."""
+         import json
++
+         engine, p1, _ = self._make_engine()
+         p1.pieces[2].progress = 9
+ 
+-        serialized = json.loads(json.dumps(GameUtils.serialize_board(engine)))
++        serialized = json.loads(json.dumps(engine.snapshot()))
+ 
+         engine2, _, _ = self._make_engine()
+-        GameUtils.apply_board(engine2, serialized)
++        engine2.restore(serialized)
+         self.assertEqual(engine2.p1.pieces[2].progress, 9)
+ 
+ 
+@@ -209,190 +215,165 @@ class TestBoardSerialization(unittest.TestCase):
+ # 4. Full game integration
+ # ---------------------------------------------------------------------------
+ 
+-class TestFullGameIntegration(unittest.TestCase):
++
++def _run_headless_game(port: int) -> tuple[list, dict, bool]:
+     """
+-    Headless host + client over real TCP. Both sides auto-pick the first
+-    valid move. Verifies the complete message protocol drives a game to
+-    completion with correct final board state.
++    Spin up a full game over real TCP using HostProtocol / ClientProtocol.
++    Both sides auto-pick the first valid move.
++    Returns (errors, winner_names, timed_out).
+     """
++    errors: list[str] = []
++    winner_names: dict[str, str] = {}
+ 
+-    def _run_game(self, port):
+-        errors = []
+-        winner_names = {}
+-
+-        def run_host():
+-            server = Server(port=port)
+-            server.start()
+-            server.wait_for_client()
+-
+-            p1 = Player("Host", P1_PATH, "●")
+-            p2 = Player("Client", P2_PATH, "●")
+-            engine = Engine(p1, p2)
++    def run_host():
++        server = Server(port=port)
++        server.start()
++        server.wait_for_client()
+ 
+-            try:
+-                while not engine.winner:
+-                    roll = engine.roll_dice()
+-                    valid_moves = engine.get_valid_moves(roll)
+-
+-                    if not valid_moves:
+-                        engine.switch_player()
+-                        server.send({"type": "no_moves", "last_action": "",
+-                                     "board": GameUtils.serialize_board(engine)})
+-                        continue
+-
+-                    if engine.current_player == p1:
+-                        server.send({"type": "rolling", "roll": roll,
+-                                     "board": GameUtils.serialize_board(engine)})
+-                        engine.execute_move(valid_moves[0], roll)
+-                    else:
+-                        server.send({"type": "your_turn", "roll": roll,
+-                                     "valid_moves": [p.identifier for p in valid_moves],
+-                                     "last_action": "", "board": GameUtils.serialize_board(engine)})
+-                        msg = server.recv()
+-                        chosen = next(p for p in valid_moves if p.identifier == msg["piece_id"])
+-                        engine.execute_move(chosen, roll)
+-
+-                    msg_type = "game_over" if engine.winner else "state"
+-                    server.send({"type": msg_type,
+-                                 "winner": engine.winner.name if engine.winner else None,
+-                                 "last_action": engine.last_action,
+-                                 "board": GameUtils.serialize_board(engine)})
+-
+-                winner_names["host_side"] = engine.winner.name
+-            except Exception as e:
+-                errors.append(f"HOST: {e}")
+-            finally:
+-                server.close()
++        p1 = Player("Host", P1_PATH, "●")
++        p2 = Player("Client", P2_PATH, "●")
++        engine = Engine(p1, p2)
++
++        try:
++            protocol = HostProtocol(
++                server=server,
++                engine=engine,
++                p1=p1,
++                p2=p2,
++                on_my_turn=lambda moves, roll: moves[0],
++                on_state=lambda last_action: None,
++                on_opponent_thinking=lambda: None,
++                on_no_moves=lambda roll: None,
++                on_game_over=lambda name: winner_names.__setitem__("host_side", name),
++            )
++            protocol.run()
++        except Exception as e:
++            errors.append(f"HOST: {e}")
++        finally:
++            server.close()
+ 
+-        def run_client():
+-            time.sleep(0.05)
+-            p1 = Player("Host", P1_PATH, "●")
+-            p2 = Player("Client", P2_PATH, "●")
+-            engine = Engine(p1, p2)
++    def run_client():
++        time.sleep(0.05)
++        p1 = Player("Host", P1_PATH, "●")
++        p2 = Player("Client", P2_PATH, "●")
++        engine = Engine(p1, p2)
++
++        client = Client("127.0.0.1", port=port)
++        client.connect()
++
++        try:
++            protocol = ClientProtocol(
++                client=client,
++                engine=engine,
++                on_rolling=lambda board, roll: None,
++                on_state=lambda board, last_action: None,
++                on_no_moves=lambda board, last_action: None,
++                on_your_turn=lambda board, roll, ids: ids[0],
++                on_game_over=lambda board, name, action: winner_names.__setitem__(
++                    "client_side", name
++                ),
++            )
++            protocol.run()
++        except Exception as e:
++            errors.append(f"CLIENT: {e}")
++        finally:
++            client.close()
+ 
+-            client = Client("127.0.0.1", port=port)
+-            client.connect()
++    host_t = threading.Thread(target=run_host)
++    client_t = threading.Thread(target=run_client)
++    host_t.start()
++    client_t.start()
++    host_t.join(timeout=30)
++    client_t.join(timeout=30)
+ 
+-            try:
+-                while True:
+-                    msg = client.recv()
+-                    if msg["type"] in ("rolling", "state", "no_moves"):
+-                        GameUtils.apply_board(engine, msg["board"])
+-                    elif msg["type"] == "your_turn":
+-                        GameUtils.apply_board(engine, msg["board"])
+-                        valid_moves = [p for p in p2.pieces
+-                                       if p.identifier in set(msg["valid_moves"])]
+-                        client.send({"type": "move", "piece_id": valid_moves[0].identifier})
+-                    elif msg["type"] == "game_over":
+-                        GameUtils.apply_board(engine, msg["board"])
+-                        winner_names["client_side"] = msg["winner"]
+-                        break
+-            except Exception as e:
+-                errors.append(f"CLIENT: {e}")
+-            finally:
+-                client.close()
++    return errors, winner_names, host_t.is_alive() or client_t.is_alive()
+ 
+-        host_t = threading.Thread(target=run_host)
+-        client_t = threading.Thread(target=run_client)
+-        host_t.start()
+-        client_t.start()
+-        host_t.join(timeout=30)
+-        client_t.join(timeout=30)
+ 
+-        return errors, winner_names, host_t.is_alive() or client_t.is_alive()
++class TestFullGameIntegration(unittest.TestCase):
++    """
++    Headless host + client over real TCP using HostProtocol / ClientProtocol.
++    Both sides auto-pick the first valid move. Verifies the complete message
++    protocol drives a game to completion with a consistent final board state.
++    """
+ 
+     def test_game_completes(self):
+-        errors, winner_names, timed_out = self._run_game(get_free_port())
++        errors, winner_names, timed_out = _run_headless_game(get_free_port())
+         self.assertFalse(timed_out, "Game did not finish within 30 seconds")
+         self.assertEqual(errors, [])
+ 
+     def test_winner_consistent_on_both_sides(self):
+-        errors, winner_names, timed_out = self._run_game(get_free_port())
++        errors, winner_names, timed_out = _run_headless_game(get_free_port())
+         self.assertFalse(timed_out)
+         self.assertEqual(errors, [])
+         self.assertEqual(winner_names["host_side"], winner_names["client_side"])
+ 
+     def test_winner_board_state_is_valid(self):
+-        """All of the winner's pieces must be at FINISH on the client's board."""
+-        errors, winner_names, timed_out = self._run_game(get_free_port())
+-        self.assertFalse(timed_out)
+-        self.assertEqual(errors, [])
+-        # Re-run a quick game and inspect the final engine state directly
++        """All of the winner's pieces must be at FINISH on the host's engine."""
+         port = get_free_port()
+-        final_engine = {}
++        final: dict = {}
+ 
+         def run_host():
+             server = Server(port=port)
+             server.start()
+             server.wait_for_client()
+-            p1 = Player("Host", P1_PATH, "●")
+-            p2 = Player("Client", P2_PATH, "●")
+-            engine = Engine(p1, p2)
+-            while not engine.winner:
+-                roll = engine.roll_dice()
+-                valid_moves = engine.get_valid_moves(roll)
+-                if not valid_moves:
+-                    engine.switch_player()
+-                    server.send({"type": "no_moves", "last_action": "",
+-                                 "board": GameUtils.serialize_board(engine)})
+-                    continue
+-                if engine.current_player == p1:
+-                    server.send({"type": "rolling", "roll": roll,
+-                                 "board": GameUtils.serialize_board(engine)})
+-                    engine.execute_move(valid_moves[0], roll)
+-                else:
+-                    server.send({"type": "your_turn", "roll": roll,
+-                                 "valid_moves": [p.identifier for p in valid_moves],
+-                                 "last_action": "", "board": GameUtils.serialize_board(engine)})
+-                    msg = server.recv()
+-                    chosen = next(p for p in valid_moves if p.identifier == msg["piece_id"])
+-                    engine.execute_move(chosen, roll)
+-                msg_type = "game_over" if engine.winner else "state"
+-                server.send({"type": msg_type,
+-                             "winner": engine.winner.name if engine.winner else None,
+-                             "last_action": engine.last_action,
+-                             "board": GameUtils.serialize_board(engine)})
+-            final_engine["winner"] = engine.winner.name
+-            final_engine["p1_done"] = all(p.progress == FINISH for p in p1.pieces)
+-            final_engine["p2_done"] = all(p.progress == FINISH for p in p2.pieces)
+-            server.close()
+ 
+-        def run_client():
+-            time.sleep(0.05)
+             p1 = Player("Host", P1_PATH, "●")
+             p2 = Player("Client", P2_PATH, "●")
+             engine = Engine(p1, p2)
+-            client = Client("127.0.0.1", port=port)
+-            client.connect()
+-            while True:
+-                msg = client.recv()
+-                if msg["type"] in ("rolling", "state", "no_moves"):
+-                    GameUtils.apply_board(engine, msg["board"])
+-                elif msg["type"] == "your_turn":
+-                    GameUtils.apply_board(engine, msg["board"])
+-                    valid_moves = [p for p in p2.pieces
+-                                   if p.identifier in set(msg["valid_moves"])]
+-                    client.send({"type": "move", "piece_id": valid_moves[0].identifier})
+-                elif msg["type"] == "game_over":
+-                    GameUtils.apply_board(engine, msg["board"])
+-                    break
+-            client.close()
++
++            def _on_game_over(name):
++                final["winner"] = name
++                final["p1_done"] = all(p.progress == FINISH for p in p1.pieces)
++                final["p2_done"] = all(p.progress == FINISH for p in p2.pieces)
++
++            try:
++                protocol = HostProtocol(
++                    server=server,
++                    engine=engine,
++                    p1=p1,
++                    p2=p2,
++                    on_my_turn=lambda moves, roll: moves[0],
++                    on_state=lambda last_action: None,
++                    on_opponent_thinking=lambda: None,
++                    on_no_moves=lambda roll: None,
++                    on_game_over=_on_game_over,
++                )
++                protocol.run()
++            finally:
++                server.close()
+ 
+         host_t = threading.Thread(target=run_host)
+-        client_t = threading.Thread(target=run_client)
+-        host_t.start(); client_t.start()
+-        host_t.join(timeout=30); client_t.join(timeout=30)
++        host_t.start()
++        time.sleep(0.05)  # let host bind and listen
++
++        p1 = Player("Host", P1_PATH, "●")
++        p2 = Player("Client", P2_PATH, "●")
++        engine = Engine(p1, p2)
++        client = Client("127.0.0.1", port=port)
++        client.connect()
++
++        ClientProtocol(
++            client=client,
++            engine=engine,
++            on_rolling=lambda board, roll: None,
++            on_state=lambda board, last_action: None,
++            on_no_moves=lambda board, last_action: None,
++            on_your_turn=lambda board, roll, ids: ids[0],
++            on_game_over=lambda board, name, action: None,
++        ).run()
++        client.close()
++        host_t.join(timeout=30)
+ 
+-        winner = final_engine["winner"]
++        winner = final["winner"]
+         if winner == "Host":
+-            self.assertTrue(final_engine["p1_done"])
++            self.assertTrue(final["p1_done"])
+         else:
+-            self.assertTrue(final_engine["p2_done"])
++            self.assertTrue(final["p2_done"])
+ 
+     def test_multiple_games_all_complete(self):
+         """Run 5 independent games to confirm no flakiness."""
+         for _ in range(5):
+-            errors, winner_names, timed_out = self._run_game(get_free_port())
++            errors, winner_names, timed_out = _run_headless_game(get_free_port())
+             self.assertFalse(timed_out)
+             self.assertEqual(errors, [])
+             self.assertEqual(winner_names["host_side"], winner_names["client_side"])
+diff --git a/ur/tests/test_play.py b/ur/tests/test_play.py
+index 55be1e9..81495a1 100644
+--- a/ur/tests/test_play.py
++++ b/ur/tests/test_play.py
+@@ -1,9 +1,10 @@
+ import unittest
+ 
+-from ur.game import Player, Engine, P1_PATH, P2_PATH
+ from ur.cli.board import Board
+-from ur.cli.utils import GameUtils
+ from ur.cli.menu import Navigation
++from ur.cli.utils import GameUtils
++from ur.game import Engine, Move, Player
++from ur.rules import P1_PATH, P2_PATH
+ 
+ 
+ def make_game():
+@@ -32,7 +33,8 @@ class TestMoveHints(unittest.TestCase):
+         self.p2.pieces[0].progress = 0
+ 
+         # P1 rolls a 1, moving from 14 -> 15 (Off the board)
+-        hint = GameUtils.build_move_hints(piece, 1, self.p2, "Bot")
++        move = Move(piece=piece, target_progress=15, target_coord=P1_PATH[15])
++        hint = GameUtils.build_move_hints(move, self.p2, "Bot")
+ 
+         self.assertIn("Scores a point!", hint)
+         self.assertNotIn("Captures", hint, "Phantom capture detected! None == None bug is back.")
+@@ -44,7 +46,8 @@ class TestMoveHints(unittest.TestCase):
+ 
+         self.p2.pieces[0].progress = 5  # Opponent is 1 space ahead
+ 
+-        hint = GameUtils.build_move_hints(piece, 1, self.p2, "Bot")
++        move = Move(piece=piece, target_progress=5, target_coord=P1_PATH[5])
++        hint = GameUtils.build_move_hints(move, self.p2, "Bot")
+ 
+         self.assertIn("Captures Bot's piece!", hint)
+         self.assertNotIn("Scores a point!", hint)
+@@ -54,7 +57,8 @@ class TestMoveHints(unittest.TestCase):
+         piece = self.p1.pieces[0]
+         piece.progress = 3  # 1 space away from the first private Rosetta (progress 4)
+ 
+-        hint = GameUtils.build_move_hints(piece, 1, self.p2, "Bot")
++        move = Move(piece=piece, target_progress=4, target_coord=P1_PATH[4])
++        hint = GameUtils.build_move_hints(move, self.p2, "Bot")
+ 
+         self.assertIn("Lands on Rosetta (Roll again!)", hint)
+ 
+@@ -73,9 +77,9 @@ class TestBoardVisualizer(unittest.TestCase):
+         cells = ui._get_cells()
+ 
+         # P1 is local, so their piece is drawn with a circled number ①
+-        self.assertIn("①", cells['o'])
++        self.assertIn("①", cells["o"])
+         # P2 is remote, drawn with a solid dot ●
+-        self.assertIn("●", cells['a'])
++        self.assertIn("●", cells["a"])
+ 
+     def test_visualizer_perspective_flip_client(self):
+         """
+@@ -92,10 +96,10 @@ class TestBoardVisualizer(unittest.TestCase):
+         # Because the board is flipped, P2's piece at (0,0) should now map to the
+         # BOTTOM-left template variable 'o'.
+         # Because P2 is local, it should be drawn with a circled number ①.
+-        self.assertIn("①", cells['o'])
++        self.assertIn("①", cells["o"])
+ 
+         # P1's piece at (2,0) should now map to the TOP-left template variable 'a'.
+-        self.assertIn("●", cells['a'])
++        self.assertIn("●", cells["a"])
+ 
+ 
+ if __name__ == "__main__":

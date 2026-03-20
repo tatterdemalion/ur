@@ -1,17 +1,28 @@
-import time
 import socket
+import time
 from typing import Optional
-from ur.game import Player, Engine, P1_PATH, P2_PATH
+
 from ur.ai.bots import Bot
 from ur.cli.board import Board
-from ur.cli.constants import *
+from ur.cli.constants import C_BOLD_TEXT, C_P1, C_P2, C_RESET, C_TEXT
+from ur.cli.protocol import ClientProtocol, HostProtocol
 from ur.cli.utils import GameUtils
-from ur.network import Server, Client, PORT
-from ur.saves import SaveFile, save_game, load_save_by_name, list_saves, delete_save, generate_game_name
+from ur.game import Engine, Move, Player
+from ur.network import PORT, Client, Server
+from ur.rules import P1_PATH, P2_PATH
+from ur.saves import (
+    SaveFile,
+    delete_save,
+    generate_game_name,
+    list_saves,
+    load_save_by_name,
+    save_game,
+)
 
 
 class Match:
     """Base class handling common UI, display, and state management for all game modes."""
+
     def __init__(self, navigation):
         self.navigation = navigation
         self.game_name = ""
@@ -52,7 +63,9 @@ class Match:
             self.ui.draw()
         print(f"\nGame Over! {winner_name} took the crown!")
         self.navigation.print_commands()
-        self.navigation.check_global_commands(input("\nPress Enter to return to the main menu: ").strip())
+        self.navigation.check_global_commands(
+            input("\nPress Enter to return to the main menu: ").strip()
+        )
 
 
 class LocalMatch(Match):
@@ -79,27 +92,33 @@ class LocalMatch(Match):
             self.update_display()
 
             player_color = C_P1 if self.engine.current_player == self.p1 else C_P2
-            turn_text = "Your" if self.engine.current_player == self.p1 else f"{self.engine.current_player.name}'s"
+            turn_text = (
+                "Your"
+                if self.engine.current_player == self.p1
+                else f"{self.engine.current_player.name}'s"
+            )
             GameUtils.animate_dice(turn_text, player_color, roll)
 
             if not valid_moves:
                 self.show_message("No valid moves. Turn skipped.", 0)
-                self.engine.last_action = f"{self.engine.current_player.name} rolled {roll} but had no moves."
+                self.engine.last_action = (
+                    f"{self.engine.current_player.name} rolled {roll} but had no moves."
+                )
                 self.engine.switch_player()
                 self.save_state("local")
                 time.sleep(2.0)
                 continue
 
             if self.engine.current_player == self.p1:
-                chosen_piece = GameUtils.get_human_move(valid_moves, roll, self.p2, self.bot.name)
-                if chosen_piece is None:
+                chosen_move = GameUtils.get_human_move(valid_moves, self.p2, self.bot.name)
+                if chosen_move is None:
                     return  # Abort to menu
             else:
                 time.sleep(1.2)
-                chosen_piece = GameUtils.get_bot_move(self.bot, self.engine, valid_moves, roll)
+                chosen_move = GameUtils.get_bot_move(self.bot, self.engine, valid_moves, roll)
                 time.sleep(1.2)
 
-            self.engine.execute_move(chosen_piece, roll)
+            self.engine.execute_move(chosen_move, roll)
             self.save_state("local")
 
         self.end_game(self.engine.winner.name)
@@ -164,10 +183,15 @@ class HostMatch(Match):
             if self.save:
                 self.engine, self.p1, self.p2 = self.save.restore_engine()
                 self.save_path = self.save.path
-                self.server.send({"type": "restore", "board": GameUtils.serialize_board(self.engine),
-                             "last_action": self.engine.last_action,
-                             "current_idx": self.engine.current_idx,
-                             "game_name": self.game_name})
+                self.server.send(
+                    {
+                        "type": "restore",
+                        "board": self.engine.snapshot(),
+                        "last_action": self.engine.last_action,
+                        "current_idx": self.engine.current_idx,
+                        "game_name": self.game_name,
+                    }
+                )
                 self.show_message(f"{C_P1}Resuming '{self.game_name}'...{C_RESET}", 1.0)
             else:
                 self.p1 = Player("You", P1_PATH, "●")
@@ -177,58 +201,41 @@ class HostMatch(Match):
 
             self.ui = Board(self.engine, self.navigation, game_name=self.game_name)
 
-            while not self.engine.winner:
-                roll = self.engine.roll_dice()
-                valid_moves = self.engine.get_valid_moves(roll)
+            def on_my_turn(valid_moves: list, roll: int):
+                self.update_display()
+                GameUtils.animate_dice("Your", C_P1, roll)
+                return GameUtils.get_human_move(valid_moves, self.p2, "Opponent")
 
+            def on_state(last_action: str):
+                self.save_state("lan")
                 self.update_display()
 
-                player_color = C_P1 if self.engine.current_player == self.p1 else C_P2
-                turn_text = "Your" if self.engine.current_player == self.p1 else "Opponent's"
-                GameUtils.animate_dice(turn_text, player_color, roll)
+            def on_opponent_thinking():
+                print("Waiting for opponent to move...")
 
-                if not valid_moves:
-                    self.server.send({"type": "rolling", "roll": roll,
-                                 "board": GameUtils.serialize_board(self.engine)})
-                    self.engine.last_action = f"{self.engine.current_player.name} rolled {roll} but had no moves."
-                    self.engine.switch_player()
-                    self.save_state("lan")
-                    self.server.send({"type": "no_moves", "last_action": self.engine.last_action,
-                                 "board": GameUtils.serialize_board(self.engine)})
-                    time.sleep(2.0)
-                    continue
-
-                if self.engine.current_player == self.p1:
-                    self.server.send({"type": "rolling", "roll": roll,
-                                 "board": GameUtils.serialize_board(self.engine)})
-                    chosen_piece = GameUtils.get_human_move(valid_moves, roll, self.p2, "Opponent")
-                    if chosen_piece is None:
-                        return  # Abort to menu
-                else:
-                    self.server.send({
-                        "type": "your_turn",
-                        "roll": roll,
-                        "valid_moves": [p.identifier for p in valid_moves],
-                        "last_action": self.engine.last_action,
-                        "board": GameUtils.serialize_board(self.engine),
-                    })
-                    print("Waiting for opponent to move...")
-                    msg = self.server.recv()
-                    piece_id = msg["piece_id"]
-                    chosen_piece = next(p for p in valid_moves if p.identifier == piece_id)
-
-                self.engine.execute_move(chosen_piece, roll)
+            def on_no_moves(roll: int):
                 self.save_state("lan")
+                self.update_display()
+                time.sleep(2.0)
 
-                if self.engine.winner:
-                    self.server.send({"type": "game_over", "winner": self.engine.winner.name,
-                                 "last_action": self.engine.last_action,
-                                 "board": GameUtils.serialize_board(self.engine)})
-                else:
-                    self.server.send({"type": "state", "last_action": self.engine.last_action,
-                                 "board": GameUtils.serialize_board(self.engine)})
+            def on_game_over(winner_name: str):
+                self.end_game(winner_name)
 
-            self.end_game(self.engine.winner.name)
+            # Show the board once before the loop begins
+            self.update_display()
+
+            protocol = HostProtocol(
+                server=self.server,
+                engine=self.engine,
+                p1=self.p1,
+                p2=self.p2,
+                on_my_turn=on_my_turn,
+                on_state=on_state,
+                on_opponent_thinking=on_opponent_thinking,
+                on_no_moves=on_no_moves,
+                on_game_over=on_game_over,
+            )
+            protocol.run()
 
         except (ConnectionError, OSError):
             self.handle_disconnect()
@@ -260,50 +267,60 @@ class ClientMatch(Match):
         try:
             init = self.client.recv()
             self.game_name = init.get("game_name", "")
-            self.ui = Board(self.engine, self.navigation, local_player=self.p2, game_name=self.game_name)
+            self.ui = Board(
+                self.engine, self.navigation, local_player=self.p2, game_name=self.game_name
+            )
 
             if init["type"] == "restore":
-                GameUtils.apply_board(self.engine, init["board"])
+                self.engine.restore(init["board"])
                 self.engine.last_action = init["last_action"]
                 self.engine.current_idx = init["current_idx"]
                 self.update_display()
                 self.show_message(f"\n{C_P1}Resuming '{self.game_name}'...{C_RESET}", 1.0)
 
-            while True:
-                msg = self.client.recv()
+            def on_rolling(board: dict, roll: int):
+                self.engine.restore(board)
+                self.update_display()
+                GameUtils.animate_dice("Opponent's", C_P2, roll)
 
-                if msg["type"] == "rolling":
-                    GameUtils.apply_board(self.engine, msg["board"])
-                    self.update_display()
-                    GameUtils.animate_dice("Opponent's", C_P2, msg["roll"])
+            def on_state(board: dict, last_action: str):
+                self.engine.restore(board)
+                self.engine.last_action = last_action
+                self.update_display()
+                time.sleep(1.2)
 
-                elif msg["type"] in ("state", "no_moves"):
-                    GameUtils.apply_board(self.engine, msg["board"])
-                    self.engine.last_action = msg["last_action"]
-                    self.update_display()
-                    time.sleep(1.2)
+            def on_no_moves(board: dict, last_action: str):
+                self.engine.restore(board)
+                self.engine.last_action = last_action
+                self.update_display()
+                time.sleep(1.2)
 
-                elif msg["type"] == "your_turn":
-                    GameUtils.apply_board(self.engine, msg["board"])
-                    self.engine.last_action = msg["last_action"]
-                    roll = msg["roll"]
+            def on_your_turn(board: dict, roll: int, valid_move_ids: list):
+                self.engine.restore(board)
+                valid_moves = self.engine.get_valid_moves(roll)
+                valid_moves = [m for m in valid_moves if m.piece.identifier in set(valid_move_ids)]
+                self.update_display()
+                GameUtils.animate_dice("Your", C_P1, roll)
+                chosen_move = GameUtils.get_human_move(valid_moves, self.p1, "Host")
+                if chosen_move is None:
+                    return None
+                return chosen_move.piece.identifier
 
-                    valid_move_ids = set(msg["valid_moves"])
-                    valid_moves = [p for p in self.p2.pieces if p.identifier in valid_move_ids]
+            def on_game_over(board: dict, winner_name: str, last_action: str):
+                self.engine.restore(board)
+                self.engine.last_action = last_action
+                self.end_game(winner_name)
 
-                    self.update_display()
-                    GameUtils.animate_dice("Your", C_P1, roll)
-
-                    chosen_piece = GameUtils.get_human_move(valid_moves, roll, self.p1, "Host")
-                    if chosen_piece is None:
-                        return  # Abort to menu
-                    self.client.send({"type": "move", "piece_id": chosen_piece.identifier})
-
-                elif msg["type"] == "game_over":
-                    GameUtils.apply_board(self.engine, msg["board"])
-                    self.engine.last_action = msg["last_action"]
-                    self.end_game(msg['winner'])
-                    break
+            protocol = ClientProtocol(
+                client=self.client,
+                engine=self.engine,
+                on_rolling=on_rolling,
+                on_state=on_state,
+                on_no_moves=on_no_moves,
+                on_your_turn=on_your_turn,
+                on_game_over=on_game_over,
+            )
+            protocol.run()
 
         except (ConnectionError, OSError):
             self.handle_disconnect()

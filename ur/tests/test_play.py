@@ -1,9 +1,10 @@
 import unittest
 
-from ur.game import Player, Engine, P1_PATH, P2_PATH
 from ur.cli.board import Board
-from ur.cli.utils import GameUtils
 from ur.cli.menu import Navigation
+from ur.cli.utils import GameUtils
+from ur.game import Engine, Move, Player
+from ur.rules import P1_PATH, P2_PATH
 
 
 def make_game():
@@ -32,7 +33,8 @@ class TestMoveHints(unittest.TestCase):
         self.p2.pieces[0].progress = 0
 
         # P1 rolls a 1, moving from 14 -> 15 (Off the board)
-        hint = GameUtils.build_move_hints(piece, 1, self.p2, "Bot")
+        move = Move(piece=piece, target_progress=15, target_coord=P1_PATH[15])
+        hint = GameUtils.build_move_hints(move, self.p2, "Bot")
 
         self.assertIn("Scores a point!", hint)
         self.assertNotIn("Captures", hint, "Phantom capture detected! None == None bug is back.")
@@ -44,7 +46,8 @@ class TestMoveHints(unittest.TestCase):
 
         self.p2.pieces[0].progress = 5  # Opponent is 1 space ahead
 
-        hint = GameUtils.build_move_hints(piece, 1, self.p2, "Bot")
+        move = Move(piece=piece, target_progress=5, target_coord=P1_PATH[5])
+        hint = GameUtils.build_move_hints(move, self.p2, "Bot")
 
         self.assertIn("Captures Bot's piece!", hint)
         self.assertNotIn("Scores a point!", hint)
@@ -54,7 +57,8 @@ class TestMoveHints(unittest.TestCase):
         piece = self.p1.pieces[0]
         piece.progress = 3  # 1 space away from the first private Rosetta (progress 4)
 
-        hint = GameUtils.build_move_hints(piece, 1, self.p2, "Bot")
+        move = Move(piece=piece, target_progress=4, target_coord=P1_PATH[4])
+        hint = GameUtils.build_move_hints(move, self.p2, "Bot")
 
         self.assertIn("Lands on Rosetta (Roll again!)", hint)
 
@@ -73,9 +77,9 @@ class TestBoardVisualizer(unittest.TestCase):
         cells = ui._get_cells()
 
         # P1 is local, so their piece is drawn with a circled number ①
-        self.assertIn("①", cells['o'])
+        self.assertIn("①", cells["o"])
         # P2 is remote, drawn with a solid dot ●
-        self.assertIn("●", cells['a'])
+        self.assertIn("●", cells["a"])
 
     def test_visualizer_perspective_flip_client(self):
         """
@@ -92,10 +96,10 @@ class TestBoardVisualizer(unittest.TestCase):
         # Because the board is flipped, P2's piece at (0,0) should now map to the
         # BOTTOM-left template variable 'o'.
         # Because P2 is local, it should be drawn with a circled number ①.
-        self.assertIn("①", cells['o'])
+        self.assertIn("①", cells["o"])
 
         # P1's piece at (2,0) should now map to the TOP-left template variable 'a'.
-        self.assertIn("●", cells['a'])
+        self.assertIn("●", cells["a"])
 
 
 if __name__ == "__main__":

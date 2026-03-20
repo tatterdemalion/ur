@@ -16,7 +16,6 @@ Message types (client -> server):
 import json
 import socket
 
-
 HOST = "0.0.0.0"
 PORT = 55378
 BUFFER = 4096

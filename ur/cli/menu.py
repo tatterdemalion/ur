@@ -1,11 +1,12 @@
+import json
 import os
 import sys
-import json
 import time
 from typing import Optional
-from ur.cli.constants import C_TEXT, C_RESET, C_BOLD_TEXT, C_ROSETTA
-from ur.cli.match import LocalMatch, HostMatch, ClientMatch
-from ur.ai.bots import Bot, RandomBot, GreedyBot, StrategicBot
+
+from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
+from ur.cli.constants import C_BOLD_TEXT, C_RESET, C_ROSETTA, C_TEXT
+from ur.cli.match import ClientMatch, HostMatch, LocalMatch
 from ur.saves import SaveFile, list_saves
 
 
@@ -29,7 +30,9 @@ class Session:
 
 
 class Navigation:
-    COMMANDS_HINT = f"{C_TEXT}  (Type 'menu' to return to main menu, 'exit' or 'quit' to quit){C_RESET}"
+    COMMANDS_HINT = (
+        f"{C_TEXT}  (Type 'menu' to return to main menu, 'exit' or 'quit' to quit){C_RESET}"
+    )
 
     @staticmethod
     def is_exit(s: str) -> bool:
@@ -85,16 +88,23 @@ class Menu:
             except ValueError:
                 pass
 
+
 def show_tutorial():
     Navigation.clear()
     print(f"{C_BOLD_TEXT}=== HOW TO PLAY THE ROYAL GAME OF UR ==={C_RESET}\n")
-    print("1. Objective: Move all 7 of your pieces across the board to the end before your opponent.")
+    print(
+        "1. Objective: Move all 7 of your pieces across the board to the end before your opponent."
+    )
     print("2. Movement: You roll 4 binary dice each turn, yielding a move of 0 to 4 spaces.")
     print("3. Stacking: You cannot land on a square occupied by your own piece.")
     print("4. Combat: Landing on an opponent's piece in the shared middle row 'captures' it,")
     print("   sending it back off-board to start over.")
-    print(f"5. Rosettas: Landing on a Rosetta ({C_ROSETTA}✿{C_RESET}) grants an extra turn immediately.")
-    print("   Additionally, the central Rosetta is a safe haven where your piece cannot be captured.\n")
+    print(
+        f"5. Rosettas: Landing on a Rosetta ({C_ROSETTA}✿{C_RESET}) grants an extra turn immediately."
+    )
+    print(
+        "   Additionally, the central Rosetta is a safe haven where your piece cannot be captured.\n"
+    )
     Navigation.print_commands()
     raw = input("\nPress Enter to return to the main menu: ").strip()
     Navigation.check_global_commands(raw)
@@ -115,7 +125,9 @@ def _pick_local_save_menu() -> Optional[SaveFile]:
 
 
 def _bot_by_name(name: str) -> Optional[Bot]:
-    return {"RandomBot": RandomBot, "GreedyBot": GreedyBot, "StrategicBot": StrategicBot}.get(name, lambda: None)()
+    return {"RandomBot": RandomBot, "GreedyBot": GreedyBot, "StrategicBot": StrategicBot}.get(
+        name, lambda: None
+    )()
 
 
 def select_bot_menu() -> Optional[Bot]:
@@ -155,7 +167,9 @@ def main_menu():
             Navigation.clear()
             print(f"{C_BOLD_TEXT}=== JOIN GAME ==={C_RESET}\n")
             last_ip = Session.load().get("last_ip", "")
-            prompt = f"Enter host IP address [{last_ip}]: " if last_ip else "Enter host IP address: "
+            prompt = (
+                f"Enter host IP address [{last_ip}]: " if last_ip else "Enter host IP address: "
+            )
             Navigation.print_commands()
             host_ip = input(prompt).strip()
 

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ur"
+version = "0.1.0"
+description = "The Royal Game of Ur — a CLI implementation"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[project.scripts]
+ur = "ur.play:run"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ur*"]
+
+[tool.pytest.ini_options]
+testpaths = ["ur/tests"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true
