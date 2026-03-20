@@ -79,7 +79,7 @@ class Engine:
 
     @property
     def opponent_idx(self) -> int:
-        return 1 - self.current_idx
+        return self.current_idx ^ 1
 
     @property
     def current_player(self) -> Player:
