@@ -7,21 +7,21 @@ from ur.rules import FINISH, ROSETTAS
 class Bot:
     name = "Bot"
 
-    def choose_move(self, state: dict, valid_moves: list, player: Player) -> Move:
+    def choose_move(self, state: dict, valid_moves: list[Move], player: Player) -> Move:
         raise NotImplementedError("Bots must implement their own logic!")
 
 
 class RandomBot(Bot):
     name = "RandomBot"
 
-    def choose_move(self, state: dict, valid_moves: list, player: Player) -> Move:
+    def choose_move(self, state: dict, valid_moves: list[Move], player: Player) -> Move:
         return random.choice(valid_moves)
 
 
 class GreedyBot(Bot):
     name = "GreedyBot"
 
-    def choose_move(self, state: dict, valid_moves: list, player: Player) -> Move:
+    def choose_move(self, state: dict, valid_moves: list[Move], player: Player) -> Move:
         best_move = valid_moves[0]
         best_score = -1
 
@@ -50,7 +50,7 @@ class GreedyBot(Bot):
 class StrategicBot(Bot):
     name = "StrategicBot"
 
-    def choose_move(self, state: dict, valid_moves: list, player: Player) -> Move:
+    def choose_move(self, state: dict, valid_moves: list[Move], player: Player) -> Move:
         best_move = valid_moves[0]
         best_score = -float("inf")
 

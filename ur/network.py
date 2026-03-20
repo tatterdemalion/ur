@@ -62,7 +62,7 @@ class Connection:
                 while b"\n" in buf:
                     line, buf = buf.split(b"\n", 1)
                     self._queue.put(json.loads(line.decode()))
-        except OSError:
+        except (OSError, json.JSONDecodeError):
             pass
         finally:
             self._queue.put(_DISCONNECTED)
