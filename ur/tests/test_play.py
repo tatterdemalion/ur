@@ -102,5 +102,42 @@ class TestBoardVisualizer(unittest.TestCase):
         self.assertIn("●", cells["a"])
 
 
+class TestClientCurrentIdx(unittest.TestCase):
+    """
+    Regression: client engine's current_idx was never updated, so get_valid_moves
+    ran on P1 (the host) instead of P2 (the client), producing wrong move hints.
+    """
+
+    def test_get_valid_moves_uses_p2_when_current_idx_is_1(self):
+        p1 = Player("Host", P1_PATH, "●")
+        p2 = Player("You", P2_PATH, "●")
+        engine = Engine(p1, p2)
+
+        # Simulate a restore that doesn't touch current_idx (default 0 = P1's turn)
+        p2.pieces[0].progress = 2  # P2 piece ① at Square 2
+
+        # Without the fix, current_idx=0 → get_valid_moves sees P1's pieces
+        engine.current_idx = 1  # the fix: set before calling get_valid_moves
+        moves = engine.get_valid_moves(1)
+
+        pieces_in_moves = [m.piece for m in moves]
+        self.assertIn(p2.pieces[0], pieces_in_moves, "P2's piece must be in valid moves")
+        self.assertNotIn(p1.pieces[0], pieces_in_moves, "P1's pieces must not appear")
+
+    def test_move_hint_uses_p2_piece_progress(self):
+        """Move hint must show P2's Square 2, not P1's Square 0 (off-board)."""
+        p1 = Player("Host", P1_PATH, "●")
+        p2 = Player("You", P2_PATH, "●")
+        engine = Engine(p1, p2)
+
+        p2.pieces[0].progress = 2
+        engine.current_idx = 1
+        moves = engine.get_valid_moves(1)
+        move = next(m for m in moves if m.piece is p2.pieces[0])
+
+        self.assertEqual(move.piece.progress, 2)
+        self.assertEqual(move.target_progress, 3)
+
+
 if __name__ == "__main__":
     unittest.main()

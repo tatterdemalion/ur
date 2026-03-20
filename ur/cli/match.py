@@ -297,6 +297,7 @@ class ClientMatch(Match):
 
             def on_your_turn(board: dict, roll: int, valid_move_ids: list):
                 self.engine.restore(board)
+                self.engine.current_idx = 1  # client is always p2
                 valid_moves = self.engine.get_valid_moves(roll)
                 valid_moves = [m for m in valid_moves if m.piece.identifier in set(valid_move_ids)]
                 self.update_display()
