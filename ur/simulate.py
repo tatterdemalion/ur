@@ -3,7 +3,8 @@ import argparse
 from dataclasses import dataclass
 from ur.ai.environment import UrEnvironment
 from ur.ai import bots
-from ur.play import BoardVisualizer
+from ur.cli.board import Board
+from ur.cli.menu import Navigation
 
 
 @dataclass
@@ -64,7 +65,7 @@ def run_simulation(bot_class_1, bot_class_2, num_games=1000, show=False):
 
         players = {0: p1_bot, 1: p2_bot}
 
-        ui = BoardVisualizer(env.game) if show else None
+        ui = Board(env.game, Navigation()) if show else None
         turns = 0
 
         if show:
