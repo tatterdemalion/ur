@@ -16,6 +16,8 @@ The physical game boards were originally discovered by English archaeologist Sir
 
 For decades, the boards sat in the British Museum as beautiful but unplayable artifacts. It wasn't until the 1980s that Dr. Irving Finkel, a British Museum curator and Assyriologist, successfully translated the rules of the game from a cuneiform clay tablet written by a Babylonian astronomer in 177 BCE. Thanks to his translation, this 4,600-year-old game is alive and playable once again.
 
+[More on Wikipedia](https://en.wikipedia.org/wiki/Royal_Game_of_Ur)
+
 ## ✨ Features
 
 * **Slick Terminal UI:** A beautiful, responsive ANSI-colored interface featuring asynchronous dice rolling animations, intuitive move highlighting, and a static ASCII grid template.
