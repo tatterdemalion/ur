@@ -47,7 +47,7 @@ class GameUtils:
         return f" — {' '.join(hints)}" if hints else ""
 
     @classmethod
-    def get_human_move(cls, valid_moves: list, p2: Player, bot_name: str) -> Optional[Move]:
+    def get_human_move(cls, valid_moves: list[Move], p2: Player, bot_name: str) -> Optional[Move]:
         from ur.cli.menu import Navigation
 
         print("Your options:")
@@ -77,7 +77,7 @@ class GameUtils:
                 print("Please enter a valid piece number.")
 
     @staticmethod
-    def get_bot_move(bot: Bot, engine: Engine, valid_moves: list, roll: int) -> Move:
+    def get_bot_move(bot: Bot, engine: Engine, valid_moves: list[Move], roll: int) -> Move:
         state = {
             "my_pieces": sorted([p.progress for p in engine.current_player.pieces]),
             "opp_pieces": sorted([p.progress for p in engine.opponent.pieces]),

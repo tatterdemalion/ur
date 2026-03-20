@@ -14,32 +14,70 @@ Message types (client -> server):
 """
 
 import json
+import queue
 import socket
+import threading
+from typing import Optional
 
 HOST = "0.0.0.0"
 PORT = 55378
 BUFFER = 4096
 
+# Sentinel placed on the recv queue when the socket closes or errors out.
+_DISCONNECTED = object()
+
 
 class Connection:
-    """Wraps a socket with a persistent read buffer so messages are never lost."""
+    """
+    Wraps a socket with a background reader thread and a thread-safe queue.
+
+    A dedicated daemon thread drains the socket continuously, parsing
+    newline-delimited JSON messages and placing them on an internal queue.
+    This means the main game-loop thread is never blocked waiting on the
+    network while it is also waiting on user input.
+
+    send() is safe to call from the main thread at any time; socket.sendall()
+    is already atomic for reasonable message sizes.
+
+    recv() blocks until the next message arrives. If the remote end closes
+    the connection, recv() raises ConnectionError regardless of whether the
+    caller is currently inside input() — the error surfaces on the *next*
+    recv() call after input() returns.
+    """
 
     def __init__(self, sock: socket.socket):
         self._sock = sock
-        self._buf = b""
+        self._queue: queue.Queue = queue.Queue()
+        self._reader = threading.Thread(target=self._read_loop, daemon=True)
+        self._reader.start()
+
+    def _read_loop(self):
+        buf = b""
+        try:
+            while True:
+                chunk = self._sock.recv(BUFFER)
+                if not chunk:
+                    break
+                buf += chunk
+                while b"\n" in buf:
+                    line, buf = buf.split(b"\n", 1)
+                    self._queue.put(json.loads(line.decode()))
+        except OSError:
+            pass
+        finally:
+            self._queue.put(_DISCONNECTED)
 
     def send(self, msg: dict):
         data = json.dumps(msg) + "\n"
         self._sock.sendall(data.encode())
 
     def recv(self) -> dict:
-        while b"\n" not in self._buf:
-            chunk = self._sock.recv(BUFFER)
-            if not chunk:
-                raise ConnectionError("Connection closed.")
-            self._buf += chunk
-        line, self._buf = self._buf.split(b"\n", 1)
-        return json.loads(line.decode())
+        item = self._queue.get()
+        if item is _DISCONNECTED:
+            # Re-enqueue so subsequent recv() calls also raise immediately.
+            self._queue.put(_DISCONNECTED)
+            raise ConnectionError("Connection closed.")
+        return item
 
     def close(self):
         self._sock.close()
@@ -48,8 +86,8 @@ class Connection:
 class Server:
     def __init__(self, port: int = PORT):
         self.port = port
-        self._server_sock: socket.socket | None = None
-        self._conn: Connection | None = None
+        self._server_sock: Optional[socket.socket] = None
+        self._conn: Optional[Connection] = None
 
     def start(self):
         self._server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -80,7 +118,7 @@ class Client:
     def __init__(self, host: str, port: int = PORT):
         self.host = host
         self.port = port
-        self._conn: Connection | None = None
+        self._conn: Optional[Connection] = None
 
     def connect(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

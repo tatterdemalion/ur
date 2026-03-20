@@ -2,21 +2,7 @@ import random
 from dataclasses import dataclass
 from typing import Optional
 
-from ur.rules import FINAL_SQUARE, FINISH, P1_PATH, P2_PATH, ROSETTAS
-
-# Re-export so existing imports of geometry from ur.game continue to work.
-__all__ = [
-    "FINAL_SQUARE",
-    "FINISH",
-    "P1_PATH",
-    "P2_PATH",
-    "ROSETTAS",
-    "Engine",
-    "Move",
-    "Piece",
-    "Player",
-    "Stats",
-]
+from ur.rules import FINISH, ROSETTAS
 
 
 @dataclass
@@ -45,7 +31,7 @@ class Piece:
 
 @dataclass
 class Move:
-    piece: "Piece"
+    piece: Piece
     target_progress: int
     target_coord: Optional[tuple]
 
