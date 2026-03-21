@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Optional
 
 from ur.cli.constants import C_BOARD, C_BOLD_TEXT, C_RESET
 from ur.cli.i18n import t
@@ -26,8 +27,9 @@ class Navigation:
         return cls.is_menu(s)
 
     @staticmethod
-    def print_commands() -> None:
-        print(f"\n{Navigation.commands_hint()}\n")
+    def print_commands(hint: Optional[str] = None) -> None:
+        text = hint if hint is not None else Navigation.commands_hint()
+        print(f"\n{text}\n")
 
     @staticmethod
     def clear():

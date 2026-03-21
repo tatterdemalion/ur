@@ -74,7 +74,7 @@ def select_bot_menu() -> Optional[Bot]:
 
 
 def _language_menu():
-    lang_keys = {"en": "lang.english", "de": "lang.german", "nl": "lang.dutch", "es": "lang.spanish", "tr": "lang.turkish"}
+    lang_keys = {"en": "lang.english", "tr": "lang.turkish"}
     menu = Menu(t("lang.title"))
     for code, key in lang_keys.items():
         menu.add(t(key), code)

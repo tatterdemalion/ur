@@ -37,9 +37,9 @@ class Board:
     def _top(self) -> Player:
         return self.p2 if self._local is self.p1 else self.p1
 
-    def draw(self):
+    def draw(self, show_labels: bool = False):
         self.navigation.clear()
-        cells = self._get_cells()
+        cells = self._get_cells(show_labels=show_labels)
         bottom, top = self._bottom, self._top
 
         bottom_score = sum(1 for p in bottom.pieces if p.progress == FINISH)
@@ -72,7 +72,7 @@ class Board:
         """
         print(game_screen)
 
-    def _get_cells(self) -> dict[str, str]:
+    def _get_cells(self, show_labels: bool = False) -> dict[str, str]:
         bottom, top = self._bottom, self._top
         cells = {}
         letter_code = 97  # ASCII code for 'a'
@@ -94,7 +94,7 @@ class Board:
 
                 if on_rosetta:
                     content = f"{C_ROSETTA}✿{C_BOARD}"
-                elif bottom_char != " " or top_char != " ":
+                elif show_labels and (bottom_char != " " or top_char != " "):
                     content = bottom_char if bottom_char != " " else top_char
                 else:
                     content = " "

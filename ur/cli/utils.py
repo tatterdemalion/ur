@@ -10,7 +10,7 @@ from ur.game import Action, ActionType, Engine, Move, Player
 from ur.rules import FINISH, ROSETTAS
 
 if TYPE_CHECKING:
-    from ur.cli.menu import Navigation
+    from ur.cli.widgets import Navigation
 
 
 class GameUtils:
@@ -53,14 +53,8 @@ class GameUtils:
         return f" — {' '.join(hints)}" if hints else ""
 
     @classmethod
-    def get_human_move(cls, valid_moves: list[Move], p2: Player, bot_name: str, navigation: "Navigation") -> Optional[Move]:
-        print(t("move.your_options"))
-
-        valid_moves.sort(key=lambda m: m.piece.progress, reverse=True)
-
+    def _build_move_groups(cls, valid_moves: list[Move], p2: Player, bot_name: str):
         rosetta_keys = {4: "move.rosetta_first", 8: "move.rosetta_middle", 14: "move.rosetta_last"}
-
-        # Group moves that have the exact same start, target, and hint
         groups = {}
         for move in valid_moves:
             prog = move.piece.progress
@@ -71,14 +65,16 @@ class GameUtils:
             else:
                 status = t("move.square", letter=chr(96 + prog))
             hint_text = cls.build_move_hints(move, p2, bot_name)
-
             key = (status, move.target_progress, hint_text)
-
             if key not in groups:
                 groups[key] = []
             groups[key].append(move)
+        return groups
 
-        # Print the grouped options
+    @classmethod
+    def _print_move_options(cls, groups: dict):
+        rosetta_keys = {4: "move.rosetta_first", 8: "move.rosetta_middle", 14: "move.rosetta_last"}
+        print(t("move.your_options"))
         for (status, target_progress, hint), moves in groups.items():
             moves.sort(key=lambda m: m.piece.identifier)
             piece_symbols = " ".join(f"{C_P1}{NUM_CIRCLES[m.piece.identifier]}{C_RESET}" for m in moves)
@@ -90,7 +86,10 @@ class GameUtils:
                 target_str = t("move.square", letter=chr(96 + target_progress))
             print(f"  {piece_symbols} : {status} -> {target_str}{hint}")
 
-        navigation.print_commands()
+    @classmethod
+    def get_human_move(cls, valid_moves: list[Move], p2: Player, bot_name: str, navigation: "Navigation", board=None) -> Optional[Move]:
+        valid_moves.sort(key=lambda m: m.piece.progress, reverse=True)
+        groups = cls._build_move_groups(valid_moves, p2, bot_name)
 
         is_single_choice = len(groups) == 1
         default_move = min(valid_moves, key=lambda m: m.piece.identifier)
@@ -101,8 +100,26 @@ class GameUtils:
         else:
             prompt += t("move.select_prompt_end")
 
+        navigation.print_commands(f"{C_BOARD}{t('nav.ingame_commands_hint')}{C_RESET}")
+
+        help_open = False
         while True:
             raw_input = input(prompt).strip()
+
+            if raw_input.lower() == "help":
+                help_open = True
+                if board is not None:
+                    board.draw(show_labels=True)
+                cls._print_move_options(groups)
+                navigation.print_commands(f"{C_BOARD}{t('nav.ingame_help_open_hint')}{C_RESET}")
+                continue
+
+            if raw_input.lower() == "back" and help_open:
+                help_open = False
+                if board is not None:
+                    board.draw(show_labels=False)
+                navigation.print_commands(f"{C_BOARD}{t('nav.ingame_commands_hint')}{C_RESET}")
+                continue
 
             if navigation.check_global_commands(raw_input):
                 return None
