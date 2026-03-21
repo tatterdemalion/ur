@@ -1,6 +1,6 @@
 import unittest
 
-from ur.game import Engine, Move, Player
+from ur.game import ActionType, Engine, Move, Player
 from ur.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
 
 
@@ -239,7 +239,8 @@ class TestExecuteMove(unittest.TestCase):
         move = Move(piece=piece, target_progress=5, target_coord=P2_PATH[5])
         self.game.execute_move(move, 1)
 
-        self.assertIn("hit opponent", self.game.last_action)
+        self.assertTrue(self.game.last_action.hit)
+        self.assertEqual(self.game.last_action.action_type, ActionType.MOVED)
 
     def test_rosetta_grants_extra_turn(self):
         # P1 roll 4 lands on private Rosetta at progress 4 (coord 2,0)
@@ -273,7 +274,7 @@ class TestExecuteMove(unittest.TestCase):
         piece.progress = 14
         move = Move(piece=piece, target_progress=FINISH, target_coord=P1_PATH[FINISH])
         self.game.execute_move(move, 1)
-        self.assertIn("scored", self.game.last_action)
+        self.assertEqual(self.game.last_action.action_type, ActionType.SCORED)
 
     def test_winning_does_not_switch_player(self):
         # All pieces at 14 except last; last one scores to win

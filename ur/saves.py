@@ -2,10 +2,10 @@ import datetime
 import json
 import os
 import random
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Optional
 
-from ur.game import Engine, Player
+from ur.game import Action, ActionType, Engine, Player
 from ur.rules import P1_PATH, P2_PATH
 
 SAVES_DIR = os.path.join(os.path.dirname(__file__), "..", "saves")
@@ -105,7 +105,7 @@ class SaveFile:
     p1_name: str
     p2_name: str
     current_idx: int
-    last_action: str
+    last_action: object  # str (legacy) or dict
     p1_pieces: dict  # str(identifier) -> progress
     p2_pieces: dict
     started_at: str
@@ -120,7 +120,17 @@ class SaveFile:
         for piece in p2.pieces:
             piece.progress = self.p2_pieces[str(piece.identifier)]
         engine.current_idx = self.current_idx
-        engine.last_action = self.last_action
+        if isinstance(self.last_action, dict):
+            engine.last_action = Action(**self.last_action)  # type: ignore[arg-type]
+        else:
+            engine.last_action = Action(
+                player_idx=0,
+                roll=0,
+                piece_id=None,
+                action_type=ActionType.STARTED,
+                hit=False,
+                rosetta=False,
+            )
         return engine, p1, p2
 
     def __str__(self) -> str:
@@ -156,7 +166,7 @@ def save_game(engine: Engine, mode: str, game_name: str, path: Optional[str] = N
         "p1_name": engine.p1.name,
         "p2_name": engine.p2.name,
         "current_idx": engine.current_idx,
-        "last_action": engine.last_action,
+        "last_action": asdict(engine.last_action),
         "p1_pieces": {str(p.identifier): p.progress for p in engine.p1.pieces},
         "p2_pieces": {str(p.identifier): p.progress for p in engine.p2.pieces},
         "started_at": started_at,

@@ -5,6 +5,24 @@ from typing import Optional
 from ur.rules import FINISH, ROSETTAS
 
 
+class ActionType:
+    STARTED = "started"
+    SKIPPED = "skipped"
+    MOVED = "moved"
+    SCORED = "scored"
+
+
+@dataclass
+class Action:
+    player_idx: int
+    roll: int
+    piece_id: Optional[int]
+    action_type: str
+    hit: bool
+    rosetta: bool
+    target_progress: Optional[int] = None
+
+
 @dataclass
 class Stats:
     p1_score: int
@@ -54,7 +72,14 @@ class Engine:
         self.p2 = p2
         self.players = [p1, p2]
         self.current_idx = 0
-        self.last_action = "Game started."
+        self.last_action = Action(
+            player_idx=0,
+            roll=0,
+            piece_id=None,
+            action_type=ActionType.STARTED,
+            hit=False,
+            rosetta=False,
+        )
 
     @property
     def opponent_idx(self) -> int:
@@ -104,6 +129,17 @@ class Engine:
             p2_waiting=sum(1 for p in self.p2.pieces if p.progress == 0),
         )
 
+    def skip_turn(self, roll: int):
+        self.last_action = Action(
+            player_idx=self.current_idx,
+            roll=roll,
+            piece_id=None,
+            action_type=ActionType.SKIPPED,
+            hit=False,
+            rosetta=False,
+        )
+        self.switch_player()
+
     def switch_player(self) -> Player:
         self.current_idx = self.opponent_idx
         return self.current_player
@@ -150,7 +186,7 @@ class Engine:
         return valid_moves
 
     def execute_move(self, move: Move, roll: int):
-        state = "moved"
+        hit = False
         roll_again = move.target_coord in ROSETTAS and move.target_progress < FINISH
 
         # Check for hit
@@ -158,22 +194,30 @@ class Engine:
             for opp_piece in self.opponent.pieces:
                 if opp_piece.coord == move.target_coord and opp_piece.is_available:
                     opp_piece.progress = 0
-                    state = "hit opponent"
+                    hit = True
                     break
 
         move.piece.progress = move.target_progress
 
         if move.piece.progress == FINISH:
-            state = "scored"
+            action_type = ActionType.SCORED
             roll_again = False
+        else:
+            action_type = ActionType.MOVED
 
-        self.last_action = (
-            f"{self.current_player.name} rolled {roll}: {move.piece.identifier} {state}."
+        self.last_action = Action(
+            player_idx=self.current_idx,
+            roll=roll,
+            piece_id=move.piece.identifier,
+            action_type=action_type,
+            hit=hit,
+            rosetta=roll_again,
+            target_progress=move.target_progress,
         )
 
         if self.current_player.has_won():
             pass
         elif roll_again:
-            self.last_action += " Rolled again!"
+            pass
         else:
             self.switch_player()

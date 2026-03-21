@@ -5,7 +5,7 @@ from typing import Optional
 
 from ur.ai.bots import Bot
 from ur.cli.constants import C_P1, C_P2, C_RESET, C_ROSETTA, NUM_CIRCLES
-from ur.game import Engine, Move, Player
+from ur.game import Action, ActionType, Engine, Move, Player
 from ur.rules import FINISH, ROSETTAS
 
 
@@ -75,6 +75,33 @@ class GameUtils:
                 print("Invalid choice. That piece cannot move right now.")
             except ValueError:
                 print("Please enter a valid piece number.")
+
+    @staticmethod
+    def format_action(action: Action, local_player_idx: int, opponent_name: str) -> str:
+        if action.action_type == ActionType.STARTED:
+            return "Game started."
+
+        is_local = action.player_idx == local_player_idx
+        subject = "You" if is_local else opponent_name
+
+        if action.action_type == ActionType.SKIPPED:
+            return f"{subject} rolled {action.roll} but had no moves."
+
+        if is_local:
+            piece_str = f"{C_P1}{NUM_CIRCLES[action.piece_id]}{C_RESET}"  # type: ignore[index]
+        else:
+            piece_str = f"{C_P2}●{C_RESET}"
+
+        if action.action_type == ActionType.SCORED:
+            return f"{subject} rolled {action.roll}: {piece_str} scored!"
+
+        # MOVED
+        parts = [f"{subject} rolled {action.roll}: {piece_str} moved to square {action.target_progress}."]
+        if action.hit:
+            parts.append("Hit opponent!")
+        if action.rosetta:
+            parts.append("Rolled again!")
+        return " ".join(parts)
 
     @staticmethod
     def get_bot_move(bot: Bot, engine: Engine, valid_moves: list[Move], roll: int) -> Move:

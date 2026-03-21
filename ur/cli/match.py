@@ -7,7 +7,9 @@ from ur.cli.board import Board
 from ur.cli.constants import C_BOLD_TEXT, C_P1, C_P2, C_RESET, C_TEXT
 from ur.cli.protocol import ClientProtocol, HostProtocol
 from ur.cli.utils import GameUtils
-from ur.game import Engine, Move, Player
+from dataclasses import asdict
+
+from ur.game import Action, Engine, Move, Player
 from ur.network import PORT, Client, Server
 from ur.rules import P1_PATH, P2_PATH
 from ur.saves import (
@@ -45,7 +47,9 @@ class Match:
         """Redraws the board and displays the last action."""
         if self.ui and self.engine:
             self.ui.draw()
-            print(f"Last action: {self.engine.last_action}")
+            local_idx = 0 if self.ui._local is self.engine.p1 else 1
+            opp_name = self.ui._top.name
+            print(f"Last action: {GameUtils.format_action(self.engine.last_action, local_idx, opp_name)}")
 
     def save_state(self, mode: str):
         """Saves the current engine state to disk."""
@@ -101,10 +105,7 @@ class LocalMatch(Match):
 
             if not valid_moves:
                 self.show_message("No valid moves. Turn skipped.", 0)
-                self.engine.last_action = (
-                    f"{self.engine.current_player.name} rolled {roll} but had no moves."
-                )
-                self.engine.switch_player()
+                self.engine.skip_turn(roll)
                 self.save_state("local")
                 time.sleep(2.0)
                 continue
@@ -187,7 +188,7 @@ class HostMatch(Match):
                     {
                         "type": "restore",
                         "board": self.engine.snapshot(),
-                        "last_action": self.engine.last_action,
+                        "last_action": asdict(self.engine.last_action),
                         "current_idx": self.engine.current_idx,
                         "game_name": self.game_name,
                     }
@@ -206,7 +207,7 @@ class HostMatch(Match):
                 GameUtils.animate_dice("Your", C_P1, roll)
                 return GameUtils.get_human_move(valid_moves, self.p2, "Opponent")
 
-            def on_state(last_action: str):
+            def on_state(last_action):
                 self.save_state("lan")
                 self.update_display()
 
@@ -273,7 +274,7 @@ class ClientMatch(Match):
 
             if init["type"] == "restore":
                 self.engine.restore(init["board"])
-                self.engine.last_action = init["last_action"]
+                self.engine.last_action = Action(**init["last_action"])
                 self.engine.current_idx = init["current_idx"]
                 self.update_display()
                 self.show_message(f"\n{C_P1}Resuming '{self.game_name}'...{C_RESET}", 1.0)
@@ -283,15 +284,15 @@ class ClientMatch(Match):
                 self.update_display()
                 GameUtils.animate_dice("Opponent's", C_P2, roll)
 
-            def on_state(board: dict, last_action: str):
+            def on_state(board: dict, last_action: dict):
                 self.engine.restore(board)
-                self.engine.last_action = last_action
+                self.engine.last_action = Action(**last_action)
                 self.update_display()
                 time.sleep(1.2)
 
-            def on_no_moves(board: dict, last_action: str):
+            def on_no_moves(board: dict, last_action: dict):
                 self.engine.restore(board)
-                self.engine.last_action = last_action
+                self.engine.last_action = Action(**last_action)
                 self.update_display()
                 time.sleep(1.2)
 
@@ -307,9 +308,9 @@ class ClientMatch(Match):
                     return None
                 return chosen_move.piece.identifier
 
-            def on_game_over(board: dict, winner_name: str, last_action: str):
+            def on_game_over(board: dict, winner_name: str, last_action: dict):
                 self.engine.restore(board)
-                self.engine.last_action = last_action
+                self.engine.last_action = Action(**last_action)
                 self.end_game(winner_name)
 
             protocol = ClientProtocol(

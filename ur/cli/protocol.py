@@ -8,9 +8,10 @@ Both classes accept callable hooks so the match layer can wire in display logic
 without any network/engine logic leaking upward.
 """
 
+from dataclasses import asdict
 from typing import Callable, Optional
 
-from ur.game import Engine, Move, Player
+from ur.game import Action, Engine, Move, Player
 from ur.network import Client, Server
 
 
@@ -76,14 +77,11 @@ class HostProtocol:
             valid_moves = engine.get_valid_moves(roll)
 
             if not valid_moves:
-                engine.last_action = (
-                    f"{engine.current_player.name} rolled {roll} but had no moves."
-                )
-                engine.switch_player()
+                engine.skip_turn(roll)
                 self.server.send(
                     {
                         "type": "no_moves",
-                        "last_action": engine.last_action,
+                        "last_action": asdict(engine.last_action),
                         "board": engine.snapshot(),
                     }
                 )
@@ -107,7 +105,7 @@ class HostProtocol:
                         "type": "your_turn",
                         "roll": roll,
                         "valid_moves": [m.piece.identifier for m in valid_moves],
-                        "last_action": engine.last_action,
+                        "last_action": asdict(engine.last_action),
                         "board": engine.snapshot(),
                     }
                 )
@@ -124,7 +122,7 @@ class HostProtocol:
                 {
                     "type": msg_type,
                     "winner": engine.winner.name if engine.winner else None,
-                    "last_action": engine.last_action,
+                    "last_action": asdict(engine.last_action),
                     "board": engine.snapshot(),
                 }
             )
@@ -146,16 +144,16 @@ class ClientProtocol:
         Freshly constructed (or restored) engine.
     on_rolling : Callable[[dict, int], None]
         Called when the host (opponent) is rolling; receives board snapshot and roll.
-    on_state : Callable[[dict, str], None]
-        Called after a state update; receives board snapshot and last_action.
-    on_no_moves : Callable[[dict, str], None]
-        Called when any player had no moves; receives board snapshot and last_action.
+    on_state : Callable[[dict, dict], None]
+        Called after a state update; receives board snapshot and last_action dict.
+    on_no_moves : Callable[[dict, dict], None]
+        Called when any player had no moves; receives board snapshot and last_action dict.
     on_your_turn : Callable[[dict, int, list[int]], Optional[int]]
         Called when it is the client's turn. Receives board snapshot, roll, and
         list of valid piece IDs. Must return the chosen piece_id, or None to abort
         (returns False from run()).
-    on_game_over : Callable[[dict, str, str], None]
-        Called with board snapshot, winner name, and last_action.
+    on_game_over : Callable[[dict, str, dict], None]
+        Called with board snapshot, winner name, and last_action dict.
     """
 
     def __init__(
@@ -163,10 +161,10 @@ class ClientProtocol:
         client: Client,
         engine: Engine,
         on_rolling: Callable[[dict, int], None],
-        on_state: Callable[[dict, str], None],
-        on_no_moves: Callable[[dict, str], None],
+        on_state: Callable[[dict, dict], None],
+        on_no_moves: Callable[[dict, dict], None],
         on_your_turn: Callable[[dict, int, list], Optional[int]],
-        on_game_over: Callable[[dict, str, str], None],
+        on_game_over: Callable[[dict, str, dict], None],
     ):
         self.client = client
         self.engine = engine
