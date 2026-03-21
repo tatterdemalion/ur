@@ -44,7 +44,7 @@ def animate_loading():
         # --- 1. THE "MINI GAME" ANIMATION (The Chase) ---
         track = [" "] * bar_length
         p1_pos = i
-        p2_pos = i - 3  # Opponent is always 3 steps behind!
+        p2_pos = i if i == bar_length else i - random.randint(1, 3)
 
         # Draw the chasing opponent
         if 0 <= p2_pos < bar_length:
@@ -61,7 +61,7 @@ def animate_loading():
             # When the player reaches the end, they land on the Rosetta!
             track[-1] = f"{C_ROSETTA}①{C_RESET}"
 
-        print(f"           {''.join(track)}")
+        print("".join(track))
 
         # --- 2. THE PROGRESS BAR ---
         percent = i / bar_length
@@ -75,7 +75,7 @@ def animate_loading():
         task_idx = min(int(percent * len(TASKS)), len(TASKS) - 1)
         task = TASKS[task_idx]
 
-        print(f"  {C_TEXT}{task:<30}{C_RESET} {bar} {int(percent * 100)}%")
+        print(f"{bar} {int(percent * 100)}% {C_TEXT}{task:<30}{C_RESET}")
 
         # Randomize the sleep timer so it feels like it's actually "loading" things
         time.sleep(random.uniform(0.01, 0.08))
