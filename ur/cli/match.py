@@ -6,6 +6,7 @@ from ur.ai.bots import Bot
 from ur.cli.board import Board
 from ur.cli.constants import C_BOLD_TEXT, C_P1, C_P2, C_RESET, C_TEXT, DEFEAT_ART, VICTORY_ART
 from ur.cli.i18n import t
+from ur.cli.widgets import Menu
 from ur.cli.protocol import ClientProtocol, HostProtocol
 from ur.cli.utils import GameUtils
 from dataclasses import asdict
@@ -18,7 +19,6 @@ from ur.saves import (
     delete_save,
     generate_game_name,
     list_saves,
-    load_save_by_name,
     save_game,
 )
 
@@ -133,30 +133,25 @@ class HostMatch(Match):
         self.save = None
 
     def _setup_game(self):
-        self.print_header(t("host.title"))
-
         lan_saves = [s for s in list_saves() if s.mode == "lan"]
-        if lan_saves:
-            print(f"{C_TEXT}{t('host.saved_lan_games')}{C_RESET}")
-            for s in lan_saves:
-                print(f"  {C_P1}{s.game_name}{C_RESET}  — saved {s.saved_at[:16]}")
-            print()
 
-        self.navigation.print_commands()
-        name_input = input(t("host.enter_game_name")).strip()
-        if self.navigation.check_global_commands(name_input):
+        _NEW_GAME = object()
+        menu = Menu(t("host.title"))
+        menu.add(t("host.new_game"), _NEW_GAME)
+        for s in lan_saves:
+            menu.add(f"{C_P1}{s.game_name}{C_RESET}  — saved {s.saved_at[:16]}", s)
+
+        choice = menu.prompt()
+        if choice is None:
             return False
 
-        self.game_name = name_input
-        if self.game_name:
-            self.save = load_save_by_name(self.game_name)
-            if self.save:
-                print(f"{C_P1}{t('match.save_found')}{self.save}{C_RESET}")
-            else:
-                print(t("host.no_save_found", name=self.game_name))
-        else:
+        if choice is _NEW_GAME:
             self.game_name = generate_game_name()
             print(f"{t('host.game_name_label')}{C_P1}{self.game_name}{C_RESET}")
+        else:
+            self.save = choice
+            self.game_name = self.save.game_name
+            print(f"{C_P1}{t('match.save_found')}{self.save}{C_RESET}")
 
         return True
 

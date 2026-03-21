@@ -1,13 +1,13 @@
 import json
 import os
-import sys
 import time
 from typing import Optional
 
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
-from ur.cli.constants import C_BOARD, C_BOLD_TEXT, C_RESET, C_ROSETTA
+from ur.cli.constants import C_BOLD_TEXT, C_RESET, C_ROSETTA
 from ur.cli.i18n import set_language, t
 from ur.cli.match import ClientMatch, HostMatch, LocalMatch
+from ur.cli.widgets import Menu, Navigation
 from ur.saves import SaveFile, list_saves
 
 
@@ -28,66 +28,6 @@ class Session:
         session.update(data)
         with open(cls.FILE, "w") as f:
             json.dump(session, f)
-
-
-class Navigation:
-    @staticmethod
-    def commands_hint() -> str:
-        return f"{C_BOARD}{t('nav.commands_hint')}{C_RESET}"
-
-    @staticmethod
-    def is_exit(s: str) -> bool:
-        return s.lower() in ("exit", "quit", ":q")
-
-    @staticmethod
-    def is_menu(s: str) -> bool:
-        return s.lower() == "menu"
-
-    @classmethod
-    def check_global_commands(cls, s: str) -> bool:
-        """Returns True if the user wants to abort to the menu."""
-        if cls.is_exit(s):
-            sys.exit()
-        return cls.is_menu(s)
-
-    @staticmethod
-    def print_commands() -> None:
-        print(f"\n{Navigation.commands_hint()}\n")
-
-    @staticmethod
-    def clear():
-        os.system("clear")
-
-
-class Menu:
-    def __init__(self, title: str):
-        self.title = title
-        self.options = []
-
-    def add(self, text: str, value):
-        """Adds an option to the menu. 'value' is what gets returned if selected."""
-        self.options.append((text, value))
-
-    def prompt(self):
-        """Displays the menu and loops until a valid choice or command is entered."""
-        while True:
-            Navigation.clear()
-            print(f"{C_BOLD_TEXT}=== {self.title} ==={C_RESET}\n")
-            for i, (text, _) in enumerate(self.options, 1):
-                print(f"  [{i}] {text}")
-            Navigation.print_commands()
-
-            raw = input(t("nav.select_option")).strip()
-
-            if Navigation.check_global_commands(raw):
-                return None
-
-            try:
-                idx = int(raw) - 1
-                if 0 <= idx < len(self.options):
-                    return self.options[idx][1]
-            except ValueError:
-                pass
 
 
 def show_tutorial():

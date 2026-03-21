@@ -257,6 +257,13 @@ _STRINGS: dict[str, dict[str, str]] = {
         "es": "CREAR PARTIDA",
         "tr": "OYUN KUR",
     },
+    "host.new_game": {
+        "en": "New game",
+        "de": "Neues Spiel",
+        "nl": "Nieuw spel",
+        "es": "Nueva partida",
+        "tr": "Yeni oyun",
+    },
     "host.saved_lan_games": {
         "en": "Saved LAN games:",
         "de": "Gespeicherte LAN-Spiele:",
