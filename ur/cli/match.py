@@ -44,10 +44,10 @@ class Match:
         if delay > 0:
             time.sleep(delay)
 
-    def update_display(self):
+    def update_display(self, show_labels: bool = False):
         """Redraws the board and displays the last action."""
         if self.ui and self.engine:
-            self.ui.draw()
+            self.ui.draw(show_labels=show_labels)
             local_idx = 0 if self.ui._local is self.engine.p1 else 1
             opp_name = self.ui._top.name
             print(f"{t('match.last_action')}{GameUtils.format_action(self.engine.last_action, local_idx, opp_name)}")
@@ -112,7 +112,7 @@ class LocalMatch(Match):
                 continue
 
             if self.engine.current_player == self.p1:
-                chosen_move = GameUtils.get_human_move(valid_moves, self.p2, self.bot.name, self.navigation, board=self.ui)
+                chosen_move = GameUtils.get_human_move(valid_moves, self.p2, self.bot.name, self.navigation, redraw=self.update_display)
                 if chosen_move is None:
                     return  # Abort to menu
             else:
@@ -201,7 +201,7 @@ class HostMatch(Match):
             def on_my_turn(valid_moves: list, roll: int):
                 self.update_display()
                 GameUtils.animate_dice(t("match.your_turn"), C_P1, roll)
-                return GameUtils.get_human_move(valid_moves, self.p2, t("player.opponent"), self.navigation, board=self.ui)
+                return GameUtils.get_human_move(valid_moves, self.p2, t("player.opponent"), self.navigation, redraw=self.update_display)
 
             def on_state(last_action):
                 self.save_state("lan")
@@ -302,7 +302,7 @@ class ClientMatch(Match):
                 valid_moves = [m for m in valid_moves if m.piece.identifier in set(valid_move_ids)]
                 self.update_display()
                 GameUtils.animate_dice(t("match.your_turn"), C_P1, roll)
-                chosen_move = GameUtils.get_human_move(valid_moves, self.p1, t("player.opponent"), self.navigation, board=self.ui)
+                chosen_move = GameUtils.get_human_move(valid_moves, self.p1, t("player.opponent"), self.navigation, redraw=self.update_display)
                 if chosen_move is None:
                     return None
                 return chosen_move.piece.identifier
