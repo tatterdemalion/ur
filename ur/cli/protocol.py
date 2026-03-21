@@ -93,6 +93,7 @@ class HostProtocol:
                     {
                         "type": "rolling",
                         "roll": roll,
+                        "last_action": asdict(engine.last_action),
                         "board": engine.snapshot(),
                     }
                 )
@@ -142,16 +143,16 @@ class ClientProtocol:
         Already-connected client instance.
     engine : Engine
         Freshly constructed (or restored) engine.
-    on_rolling : Callable[[dict, int], None]
-        Called when the host (opponent) is rolling; receives board snapshot and roll.
+    on_rolling : Callable[[dict, int, dict], None]
+        Called when the host (opponent) is rolling; receives board snapshot, roll, and last_action dict.
     on_state : Callable[[dict, dict], None]
         Called after a state update; receives board snapshot and last_action dict.
     on_no_moves : Callable[[dict, dict], None]
         Called when any player had no moves; receives board snapshot and last_action dict.
-    on_your_turn : Callable[[dict, int, list[int]], Optional[int]]
-        Called when it is the client's turn. Receives board snapshot, roll, and
-        list of valid piece IDs. Must return the chosen piece_id, or None to abort
-        (returns False from run()).
+    on_your_turn : Callable[[dict, int, list[int], dict], Optional[int]]
+        Called when it is the client's turn. Receives board snapshot, roll,
+        list of valid piece IDs, and last_action dict. Must return the chosen
+        piece_id, or None to abort (returns False from run()).
     on_game_over : Callable[[dict, str, dict], None]
         Called with board snapshot, winner name, and last_action dict.
     """
@@ -160,10 +161,10 @@ class ClientProtocol:
         self,
         client: Client,
         engine: Engine,
-        on_rolling: Callable[[dict, int], None],
+        on_rolling: Callable[[dict, int, dict], None],
         on_state: Callable[[dict, dict], None],
         on_no_moves: Callable[[dict, dict], None],
-        on_your_turn: Callable[[dict, int, list], Optional[int]],
+        on_your_turn: Callable[[dict, int, list, dict], Optional[int]],
         on_game_over: Callable[[dict, str, dict], None],
     ):
         self.client = client
@@ -186,7 +187,7 @@ class ClientProtocol:
             msg_type = msg["type"]
 
             if msg_type == "rolling":
-                self.on_rolling(msg["board"], msg["roll"])
+                self.on_rolling(msg["board"], msg["roll"], msg["last_action"])
 
             elif msg_type == "state":
                 self.on_state(msg["board"], msg["last_action"])
@@ -196,7 +197,7 @@ class ClientProtocol:
 
             elif msg_type == "your_turn":
                 piece_id = self.on_your_turn(
-                    msg["board"], msg["roll"], msg["valid_moves"]
+                    msg["board"], msg["roll"], msg["valid_moves"], msg["last_action"]
                 )
                 if piece_id is None:
                     return False

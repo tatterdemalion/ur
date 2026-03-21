@@ -265,10 +265,10 @@ def _run_headless_game(port: int) -> tuple[list, dict, bool]:
             protocol = ClientProtocol(
                 client=client,
                 engine=engine,
-                on_rolling=lambda board, roll: None,
+                on_rolling=lambda board, roll, last_action: None,
                 on_state=lambda board, last_action: None,
                 on_no_moves=lambda board, last_action: None,
-                on_your_turn=lambda board, roll, ids: ids[0],
+                on_your_turn=lambda board, roll, ids, last_action: ids[0],
                 on_game_over=lambda board, name, action: winner_names.__setitem__(
                     "client_side", name
                 ),
@@ -355,10 +355,10 @@ class TestFullGameIntegration(unittest.TestCase):
         ClientProtocol(
             client=client,
             engine=engine,
-            on_rolling=lambda board, roll: None,
+            on_rolling=lambda board, roll, last_action: None,
             on_state=lambda board, last_action: None,
             on_no_moves=lambda board, last_action: None,
-            on_your_turn=lambda board, roll, ids: ids[0],
+            on_your_turn=lambda board, roll, ids, last_action: ids[0],
             on_game_over=lambda board, name, action: None,
         ).run()
         client.close()

@@ -59,11 +59,10 @@ class Match:
     def handle_disconnect(self):
         self.show_message(f"\n{C_P2}Opponent disconnected.{C_RESET}", 2.0)
 
-    def end_game(self, winner_name: str):
+    def end_game(self, is_victory: bool):
         """Cleans up the save file, displays the victory/defeat art, then prompts to return to menu."""
         if self.save_path:
             delete_save(self.save_path)
-        is_victory = self.ui is not None and winner_name == self.ui._local.name
         self.navigation.clear()
         print(VICTORY_ART if is_victory else DEFEAT_ART)
         time.sleep(5)
@@ -123,7 +122,7 @@ class LocalMatch(Match):
             self.engine.execute_move(chosen_move, roll)
             self.save_state("local")
 
-        self.end_game(self.engine.winner.name)
+        self.end_game(self.engine.winner is self.p1)
 
 
 class HostMatch(Match):
@@ -221,7 +220,7 @@ class HostMatch(Match):
                 time.sleep(2.0)
 
             def on_game_over(winner_name: str):
-                self.end_game(winner_name)
+                self.end_game(winner_name == self.p1.name)
 
             # Show the board once before the loop begins
             self.update_display()
@@ -251,7 +250,7 @@ class ClientMatch(Match):
         super().__init__(navigation)
         self.host_ip = host_ip
         self.client = Client(host_ip)
-        self.p1 = Player("Host", P1_PATH, "●")
+        self.p1 = Player("Opponent", P1_PATH, "●")
         self.p2 = Player("You", P2_PATH, "●")
         self.engine = Engine(self.p1, self.p2)
 
@@ -280,10 +279,12 @@ class ClientMatch(Match):
                 self.update_display()
                 self.show_message(f"\n{C_P1}Resuming '{self.game_name}'...{C_RESET}", 1.0)
 
-            def on_rolling(board: dict, roll: int):
+            def on_rolling(board: dict, roll: int, last_action: dict):
                 self.engine.restore(board)
+                self.engine.last_action = Action(**last_action)
                 self.update_display()
                 GameUtils.animate_dice("Opponent's", C_P2, roll)
+                print("Waiting for opponent to move...")
 
             def on_state(board: dict, last_action: dict):
                 self.engine.restore(board)
@@ -297,14 +298,15 @@ class ClientMatch(Match):
                 self.update_display()
                 time.sleep(1.2)
 
-            def on_your_turn(board: dict, roll: int, valid_move_ids: list):
+            def on_your_turn(board: dict, roll: int, valid_move_ids: list, last_action: dict):
                 self.engine.restore(board)
+                self.engine.last_action = Action(**last_action)
                 self.engine.current_idx = 1  # client is always p2
                 valid_moves = self.engine.get_valid_moves(roll)
                 valid_moves = [m for m in valid_moves if m.piece.identifier in set(valid_move_ids)]
                 self.update_display()
                 GameUtils.animate_dice("Your", C_P1, roll)
-                chosen_move = GameUtils.get_human_move(valid_moves, self.p1, "Host", self.navigation)
+                chosen_move = GameUtils.get_human_move(valid_moves, self.p1, "Opponent", self.navigation)
                 if chosen_move is None:
                     return None
                 return chosen_move.piece.identifier
@@ -312,7 +314,7 @@ class ClientMatch(Match):
             def on_game_over(board: dict, winner_name: str, last_action: dict):
                 self.engine.restore(board)
                 self.engine.last_action = Action(**last_action)
-                self.end_game(winner_name)
+                self.end_game(winner_name == self.p1.name)
 
             protocol = ClientProtocol(
                 client=self.client,
