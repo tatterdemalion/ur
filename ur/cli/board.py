@@ -76,6 +76,9 @@ class Board:
         cells = {}
         letter_code = 97  # ASCII code for 'a'
 
+        is_my_turn = self.engine.current_player == self._local
+        path_letters = {self._bottom.path[i]: chr(96 + i) for i in range(1, 15)}
+
         row_order = range(BOARD_ROWS - 1, -1, -1) if self._local is self.p2 else range(BOARD_ROWS)
 
         for r in row_order:
@@ -84,11 +87,15 @@ class Board:
                 if coord in MISSING_CELLS:
                     continue
 
-                content = " "
-                on_rosetta = False
-                if coord in ROSETTAS:
-                    on_rosetta = True
+                on_rosetta = coord in ROSETTAS
+                path_char = path_letters.get(coord, " ")
+
+                if on_rosetta:
                     content = f"{C_ROSETTA}✿{C_BOARD}"
+                elif is_my_turn and path_char != " ":
+                    content = f"{C_BOARD}{path_char}{C_BOARD}"
+                else:
+                    content = " "
 
                 for piece in top.pieces:
                     if piece.is_available and piece.coord == coord:

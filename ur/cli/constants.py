@@ -4,6 +4,8 @@ C_BOARD = "\033[90m"  # Dark Gray for drawing the grid lines of the board
 C_P1 = "\033[96m"  # Bright Cyan for Player 1 (You) and your pieces
 C_P2 = "\033[91m"  # Bright Red for Player 2 (The Bot) and its pieces
 C_ROSETTA = "\033[93m"  # Bright Yellow for Rosetta squares (✿) and point alerts
+C_SCORE = "\033[92m"  # Green for success
+C_ITALIC = "\033[3m"        # Italic text
 C_BOLD_TEXT = "\033[1;97m"  # 1 for Bold, 97 for Bright White
 C_TEXT = "\033[97m"  # Bright White for headers, menus, and general UI text
 
@@ -20,4 +22,37 @@ TEMPLATE = """\
 ╠═══╬═══╬═══╬═══╬═══╩═══╬═══╬═══╣
 ║{o}║{p}║{q}║{r}║       ║{s}║{t}║
 ╚═══╩═══╩═══╩═══╝       ╚═══╩═══╝\
+"""
+
+
+VICTORY_ART = f"""
+{C_BOARD}       _________________________________________
+      /                                         \\
+     |    {C_ROSETTA}𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭{C_BOARD}    |
+     |  ═══════════════════════════════════════  |
+     |                                           |
+     |       {C_P1}V I C T O R Y   A T   U R !{C_BOARD}         |
+     |                                           |
+     |  ───────────────────────────────────────  |
+     |        {C_TEXT}T H E   G O D S   S M I L E{C_BOARD}        |
+     |            {C_TEXT}U P O N   Y O U{C_BOARD}                |
+     |                                           |
+     |    {C_ROSETTA}𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭{C_BOARD}    |
+      \\_________________________________________/ {C_RESET}
+"""
+
+DEFEAT_ART = f"""
+{C_BOARD}       ___________________       _______________
+      /                   \\     /               \\
+     |    {C_ROSETTA}𒀭 ☼ 𒀭 ☼ 𒀭 ☼{C_BOARD}    \\   /    {C_ROSETTA}𒀭 ☼ 𒀭 ☼{C_BOARD}   |
+     |  ═══════════════════|   |══════════════  |
+     |                     \\_  |                |
+     |       {C_P2}D E F E A T{C_BOARD}     \\ |   {C_P2}A T   U R{C_BOARD}    |
+     |                       / |                |
+     |  ────────────────────/  |──────────────  |
+     |        {C_TEXT}T H E   G O D{C_BOARD} /  | {C_TEXT}S   W E E P{C_BOARD}    |
+     |           {C_TEXT}F O R{C_BOARD}     |   / {C_TEXT}Y O U{C_BOARD}          |
+     |                     \\  /                 |
+     |    {C_ROSETTA}𒀭 ☼ 𒀭 ☼ 𒀭 ☼{C_BOARD}   | |  {C_ROSETTA}𒀭 ☼ 𒀭 ☼{C_BOARD}    |
+      \\____________________/   \\_______________/ {C_RESET}
 """

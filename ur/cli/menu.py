@@ -5,7 +5,7 @@ import time
 from typing import Optional
 
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
-from ur.cli.constants import C_BOLD_TEXT, C_RESET, C_ROSETTA, C_TEXT
+from ur.cli.constants import C_BOARD, C_BOLD_TEXT, C_RESET, C_ROSETTA, C_TEXT
 from ur.cli.match import ClientMatch, HostMatch, LocalMatch
 from ur.saves import SaveFile, list_saves
 
@@ -31,7 +31,7 @@ class Session:
 
 class Navigation:
     COMMANDS_HINT = (
-        f"{C_TEXT}  (Type 'menu' to return to main menu, 'exit' or 'quit' to quit){C_RESET}"
+        f"{C_BOARD}  (Type 'menu' to return to main menu, 'exit' or 'quit' to quit){C_RESET}"
     )
 
     @staticmethod

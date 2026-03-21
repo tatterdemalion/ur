@@ -1,21 +1,25 @@
 import random
 import sys
 import time
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from ur.ai.bots import Bot
-from ur.cli.constants import C_P1, C_P2, C_RESET, C_ROSETTA, NUM_CIRCLES
+from ur.cli.constants import C_BOARD, C_ITALIC, C_P1, C_P2, C_RESET, C_ROSETTA, C_SCORE, NUM_CIRCLES
 from ur.game import Action, ActionType, Engine, Move, Player
 from ur.rules import FINISH, ROSETTAS
+
+if TYPE_CHECKING:
+    from ur.cli.menu import Navigation
 
 
 class GameUtils:
     @staticmethod
     def animate_dice(turn_text: str, player_color: str, roll: int):
+        print(f"{turn_text} turn.")
         for _ in range(12):
             random_dots = " ".join(random.choice(["●", "○"]) for _ in range(4))
             sys.stdout.write(
-                f"\r{turn_text} turn. Rolling...  [{player_color}{random_dots}{C_RESET}]"
+                f"\r[{player_color}{random_dots}{C_RESET}] {C_BOARD}{C_ITALIC}Rolling{C_RESET}" + " " * 4
             )
             sys.stdout.flush()
             time.sleep(0.06)
@@ -24,10 +28,11 @@ class GameUtils:
         random.shuffle(final_faces)
         final_str = " ".join(final_faces)
         sys.stdout.write(
-            f"\r{turn_text} turn. Rolled {roll}! [{player_color}{final_str}{C_RESET}]"
-            + " " * 10
-            + "\n\n"
+            f"\r[{player_color}{final_str}{C_RESET}] {C_BOARD}{C_ITALIC}Rolled{C_RESET} " + " " * 4
         )
+        sys.stdout.flush()
+        time.sleep(0.5)
+        sys.stdout.write(f"\r[{player_color}{final_str}{C_RESET}]" + " " * 12 + "\n\n")
         sys.stdout.flush()
 
     @staticmethod
@@ -35,7 +40,7 @@ class GameUtils:
         hints = []
 
         if move.target_progress == FINISH:
-            hints.append(f"{C_ROSETTA}Scores a point!{C_RESET}")
+            hints.append(f"{C_SCORE}Scores a point!{C_SCORE}")
         elif move.target_coord in ROSETTAS:
             hints.append(f"{C_ROSETTA}Lands on Rosetta (Roll again!){C_RESET}")
 
@@ -47,15 +52,23 @@ class GameUtils:
         return f" — {' '.join(hints)}" if hints else ""
 
     @classmethod
-    def get_human_move(cls, valid_moves: list[Move], p2: Player, bot_name: str, navigation) -> Optional[Move]:
+    def get_human_move(cls, valid_moves: list[Move], p2: Player, bot_name: str, navigation: "Navigation") -> Optional[Move]:
         print("Your options:")
 
         valid_moves.sort(key=lambda m: m.piece.progress, reverse=True)
 
+        rosetta_names = {4: "first", 8: "middle", 14: "last"}
+
         # Group moves that have the exact same start, target, and hint
         groups = {}
         for move in valid_moves:
-            status = "Off-board" if move.piece.progress == 0 else f"Square {move.piece.progress}"
+            prog = move.piece.progress
+            if prog == 0:
+                status = "Off-board"
+            elif prog in rosetta_names:
+                status = f"{rosetta_names[prog]} {C_ROSETTA}✿{C_RESET}"
+            else:
+                status = f"Square {chr(96 + prog)}"
             hint_text = cls.build_move_hints(move, p2, bot_name)
 
             key = (status, move.target_progress, hint_text)
@@ -65,10 +78,16 @@ class GameUtils:
             groups[key].append(move)
 
         # Print the grouped options
-        for (status, target, hint), moves in groups.items():
+        for (status, target_progress, hint), moves in groups.items():
             moves.sort(key=lambda m: m.piece.identifier)
             piece_symbols = " ".join(f"{C_P1}{NUM_CIRCLES[m.piece.identifier]}{C_RESET}" for m in moves)
-            print(f"  {piece_symbols} : {status} -> Square {target}{hint}")
+            if target_progress == FINISH:
+                target_str = "Finish"
+            elif target_progress in rosetta_names:
+                target_str = f"{rosetta_names[target_progress].capitalize()} {C_ROSETTA}✿{C_RESET}"
+            else:
+                target_str = f"Square {chr(96 + target_progress)}"
+            print(f"  {piece_symbols} : {status} -> {target_str}{hint}")
 
         navigation.print_commands()
 
@@ -108,23 +127,47 @@ class GameUtils:
         is_local = action.player_idx == local_player_idx
         subject = "You" if is_local else opponent_name
 
+        roll_faces = "●" * action.roll + "○" * (4 - action.roll)
+        roll_color = C_P1 if is_local else C_P2
+        roll_str = f"{roll_color}{roll_faces}{C_RESET}"
+
         if action.action_type == ActionType.SKIPPED:
-            return f"{subject} rolled {action.roll} but had no moves."
+            return f"{subject} rolled {roll_str} but had no moves."
+
+        rosetta_names = {4: "first", 8: "middle", 14: "last"}
+
+        if action.action_type == ActionType.SCORED:
+            if is_local:
+                piece_str = f"{C_P1}{NUM_CIRCLES[action.piece_id]}{C_RESET}"  # type: ignore[index]
+                return f"{subject} rolled {roll_str} and piece {piece_str} {C_P1}scored!{C_RESET}"
+            else:
+                return f"{subject} rolled {roll_str} and {C_P2}scored a piece!{C_RESET}"
+
+        # MOVED
+        assert action.target_progress is not None
+        target = action.target_progress
+        if target in rosetta_names:
+            rosetta_label = f"{rosetta_names[target]} {C_ROSETTA}✿{C_RESET}"
+            target_str = f"the {rosetta_label}"
+        else:
+            target_str = f"square {chr(96 + target)}"
 
         if is_local:
             piece_str = f"{C_P1}{NUM_CIRCLES[action.piece_id]}{C_RESET}"  # type: ignore[index]
+            parts = [f"{subject} rolled {roll_str} and moved piece {piece_str} to {target_str}."]
         else:
-            piece_str = f"{C_P2}●{C_RESET}"
+            parts = [f"{subject} rolled {roll_str} and moved a piece to {target_str}."]
 
-        if action.action_type == ActionType.SCORED:
-            return f"{subject} rolled {action.roll}: {piece_str} scored!"
-
-        # MOVED
-        parts = [f"{subject} rolled {action.roll}: {piece_str} moved to square {action.target_progress}."]
         if action.hit:
-            parts.append("Hit opponent!")
+            if is_local:
+                parts.append(f"{C_P1}Took one of their pieces!{C_RESET}")
+            else:
+                parts.append(f"{C_P2}Took out one of your pieces!{C_RESET}")
         if action.rosetta:
-            parts.append("Rolled again!")
+            if is_local:
+                parts.append(f"{C_ROSETTA}It is your turn again!{C_RESET}")
+            else:
+                parts.append(f"{C_ROSETTA}It is their turn again!{C_RESET}")
         return " ".join(parts)
 
     @staticmethod

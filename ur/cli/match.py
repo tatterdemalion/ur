@@ -4,7 +4,7 @@ from typing import Optional
 
 from ur.ai.bots import Bot
 from ur.cli.board import Board
-from ur.cli.constants import C_BOLD_TEXT, C_P1, C_P2, C_RESET, C_TEXT
+from ur.cli.constants import C_BOLD_TEXT, C_P1, C_P2, C_RESET, C_TEXT, DEFEAT_ART, VICTORY_ART
 from ur.cli.protocol import ClientProtocol, HostProtocol
 from ur.cli.utils import GameUtils
 from dataclasses import asdict
@@ -60,12 +60,13 @@ class Match:
         self.show_message(f"\n{C_P2}Opponent disconnected.{C_RESET}", 2.0)
 
     def end_game(self, winner_name: str):
-        """Cleans up the save file, displays the final board, and prompts to return to menu."""
+        """Cleans up the save file, displays the victory/defeat art, then prompts to return to menu."""
         if self.save_path:
             delete_save(self.save_path)
-        if self.ui:
-            self.ui.draw()
-        print(f"\nGame Over! {winner_name} took the crown!")
+        is_victory = self.ui is not None and winner_name == self.ui._local.name
+        self.navigation.clear()
+        print(VICTORY_ART if is_victory else DEFEAT_ART)
+        time.sleep(5)
         self.navigation.print_commands()
         self.navigation.check_global_commands(
             input("\nPress Enter to return to the main menu: ").strip()
