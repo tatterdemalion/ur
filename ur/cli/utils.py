@@ -49,21 +49,47 @@ class GameUtils:
     @classmethod
     def get_human_move(cls, valid_moves: list[Move], p2: Player, bot_name: str, navigation) -> Optional[Move]:
         print("Your options:")
-        valid_moves.sort(key=lambda m: m.piece.identifier)
 
+        valid_moves.sort(key=lambda m: m.piece.progress, reverse=True)
+
+        # Group moves that have the exact same start, target, and hint
+        groups = {}
         for move in valid_moves:
             status = "Off-board" if move.piece.progress == 0 else f"Square {move.piece.progress}"
             hint_text = cls.build_move_hints(move, p2, bot_name)
-            print(
-                f"  {C_P1}{NUM_CIRCLES[move.piece.identifier]}{C_RESET} : {status} -> Square {move.target_progress}{hint_text}"
-            )
+
+            key = (status, move.target_progress, hint_text)
+
+            if key not in groups:
+                groups[key] = []
+            groups[key].append(move)
+
+        # Print the grouped options
+        for (status, target, hint), moves in groups.items():
+            moves.sort(key=lambda m: m.piece.identifier)
+            piece_symbols = " ".join(f"{C_P1}{NUM_CIRCLES[m.piece.identifier]}{C_RESET}" for m in moves)
+            print(f"  {piece_symbols} : {status} -> Square {target}{hint}")
 
         navigation.print_commands()
+
+        is_single_choice = len(groups) == 1
+        default_move = min(valid_moves, key=lambda m: m.piece.identifier)
+
+        prompt = "\nSelect a piece to move (1-7)"
+        if is_single_choice:
+            prompt += f" [Enter for {default_move.piece.identifier}]: "
+        else:
+            prompt += ": "
+
         while True:
-            raw_input = input("\nSelect a piece to move (1-7): ").strip()
+            raw_input = input(prompt).strip()
 
             if navigation.check_global_commands(raw_input):
                 return None
+
+            # Handle the Enter shortcut
+            if is_single_choice and not raw_input:
+                return default_move
 
             try:
                 choice = int(raw_input)

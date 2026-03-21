@@ -6,10 +6,10 @@ from ur.rules import FINISH, ROSETTAS
 
 
 class ActionType:
-    STARTED = "started"
-    SKIPPED = "skipped"
-    MOVED = "moved"
-    SCORED = "scored"
+    STARTED:str = "started"
+    SKIPPED:str = "skipped"
+    MOVED:str = "moved"
+    SCORED:str = "scored"
 
 
 @dataclass
