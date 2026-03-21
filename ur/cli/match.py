@@ -82,8 +82,8 @@ class LocalMatch(Match):
             self.game_name = save.game_name
             self.save_path = save.path
         else:
-            self.p1 = Player(t("player.you"), P1_PATH, "●")
-            self.p2 = Player(bot.name, P2_PATH, "●")
+            self.p1 = Player(0, t("player.you"), P1_PATH)
+            self.p2 = Player(1, bot.name, P2_PATH)
             self.engine = Engine(self.p1, self.p2)
             self.game_name = generate_game_name()
 
@@ -123,7 +123,7 @@ class LocalMatch(Match):
             self.engine.execute_move(chosen_move, roll)
             self.save_state("local")
 
-        self.end_game(self.engine.winner is self.p1)
+        self.end_game(self.engine.winner.player_idx == self.p1.player_idx)
 
 
 class HostMatch(Match):
@@ -196,8 +196,8 @@ class HostMatch(Match):
                 )
                 self.show_message(f"{C_P1}{t('host.resuming', name=self.game_name)}{C_RESET}", 1.0)
             else:
-                self.p1 = Player(t("player.you"), P1_PATH, "●")
-                self.p2 = Player(t("player.opponent"), P2_PATH, "●")
+                self.p1 = Player(0, t("player.you"), P1_PATH)
+                self.p2 = Player(1, t("player.opponent"), P2_PATH)
                 self.engine = Engine(self.p1, self.p2)
                 self.server.send({"type": "new_game", "game_name": self.game_name})
 
@@ -220,8 +220,8 @@ class HostMatch(Match):
                 self.update_display()
                 time.sleep(2.0)
 
-            def on_game_over(winner_name: str):
-                self.end_game(winner_name == self.p1.name)
+            def on_game_over(winner_idx: int):
+                self.end_game(winner_idx == self.p1.player_idx)
 
             # Show the board once before the loop begins
             self.update_display()
@@ -251,8 +251,8 @@ class ClientMatch(Match):
         super().__init__(navigation)
         self.host_ip = host_ip
         self.client = Client(host_ip)
-        self.p1 = Player(t("player.opponent"), P1_PATH, "●")
-        self.p2 = Player(t("player.you"), P2_PATH, "●")
+        self.p1 = Player(0, t("player.opponent"), P1_PATH)
+        self.p2 = Player(1, t("player.you"), P2_PATH)
         self.engine = Engine(self.p1, self.p2)
 
     def start(self):
@@ -312,10 +312,10 @@ class ClientMatch(Match):
                     return None
                 return chosen_move.piece.identifier
 
-            def on_game_over(board: dict, winner_name: str, last_action: dict):
+            def on_game_over(board: dict, winner_idx: int, last_action: dict):
                 self.engine.restore(board)
                 self.engine.last_action = Action(**last_action)
-                self.end_game(winner_name == self.p1.name)
+                self.end_game(winner_idx == self.p2.player_idx)
 
             protocol = ClientProtocol(
                 client=self.client,

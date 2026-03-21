@@ -6,8 +6,8 @@ from ur.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
 
 
 def make_game():
-    p1 = Player("P1", P1_PATH, "X")
-    p2 = Player("P2", P2_PATH, "O")
+    p1 = Player(0, "P1", P1_PATH)
+    p2 = Player(1, "P2", P2_PATH)
     return Engine(p1, p2), p1, p2
 
 

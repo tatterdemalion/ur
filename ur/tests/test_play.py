@@ -8,8 +8,8 @@ from ur.rules import P1_PATH, P2_PATH
 
 
 def make_game():
-    p1 = Player("P1", P1_PATH, "X")
-    p2 = Player("P2", P2_PATH, "O")
+    p1 = Player(0, "P1", P1_PATH)
+    p2 = Player(1, "P2", P2_PATH)
     return Engine(p1, p2), p1, p2
 
 
@@ -109,8 +109,8 @@ class TestClientCurrentIdx(unittest.TestCase):
     """
 
     def test_get_valid_moves_uses_p2_when_current_idx_is_1(self):
-        p1 = Player("Host", P1_PATH, "●")
-        p2 = Player("You", P2_PATH, "●")
+        p1 = Player(0, "Host", P1_PATH)
+        p2 = Player(1, "You", P2_PATH)
         engine = Engine(p1, p2)
 
         # Simulate a restore that doesn't touch current_idx (default 0 = P1's turn)
@@ -126,8 +126,8 @@ class TestClientCurrentIdx(unittest.TestCase):
 
     def test_move_hint_uses_p2_piece_progress(self):
         """Move hint must show P2's Square 2, not P1's Square 0 (off-board)."""
-        p1 = Player("Host", P1_PATH, "●")
-        p2 = Player("You", P2_PATH, "●")
+        p1 = Player(0, "Host", P1_PATH)
+        p2 = Player(1, "You", P2_PATH)
         engine = Engine(p1, p2)
 
         p2.pieces[0].progress = 2

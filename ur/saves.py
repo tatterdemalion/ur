@@ -112,8 +112,8 @@ class SaveFile:
     saved_at: str
 
     def restore_engine(self) -> tuple[Engine, Player, Player]:
-        p1 = Player(self.p1_name, P1_PATH, "●")
-        p2 = Player(self.p2_name, P2_PATH, "●")
+        p1 = Player(0, self.p1_name, P1_PATH)
+        p2 = Player(1, self.p2_name, P2_PATH)
         engine = Engine(p1, p2)
         for piece in p1.pieces:
             piece.progress = self.p1_pieces[str(piece.identifier)]

@@ -169,8 +169,8 @@ class TestServerClient(unittest.TestCase):
 
 class TestBoardSerialization(unittest.TestCase):
     def _make_engine(self):
-        p1 = Player("P1", P1_PATH, "●")
-        p2 = Player("P2", P2_PATH, "●")
+        p1 = Player(0, "P1", P1_PATH)
+        p2 = Player(1, "P2", P2_PATH)
         return Engine(p1, p2), p1, p2
 
     def test_roundtrip_all_at_start(self):
@@ -223,15 +223,15 @@ def _run_headless_game(port: int) -> tuple[list, dict, bool]:
     Returns (errors, winner_names, timed_out).
     """
     errors: list[str] = []
-    winner_names: dict[str, str] = {}
+    winner_names: dict[str, int] = {}
 
     def run_host():
         server = Server(port=port)
         server.start()
         server.wait_for_client()
 
-        p1 = Player("Host", P1_PATH, "●")
-        p2 = Player("Client", P2_PATH, "●")
+        p1 = Player(0, "Host", P1_PATH)
+        p2 = Player(1, "Client", P2_PATH)
         engine = Engine(p1, p2)
 
         try:
@@ -244,7 +244,7 @@ def _run_headless_game(port: int) -> tuple[list, dict, bool]:
                 on_state=lambda last_action: None,
                 on_opponent_thinking=lambda: None,
                 on_no_moves=lambda roll: None,
-                on_game_over=lambda name: winner_names.__setitem__("host_side", name),
+                on_game_over=lambda winner_idx: winner_names.__setitem__("host_side", winner_idx),
             )
             protocol.run()
         except Exception as e:
@@ -254,8 +254,8 @@ def _run_headless_game(port: int) -> tuple[list, dict, bool]:
 
     def run_client():
         time.sleep(0.05)
-        p1 = Player("Host", P1_PATH, "●")
-        p2 = Player("Client", P2_PATH, "●")
+        p1 = Player(0, "Host", P1_PATH)
+        p2 = Player(1, "Client", P2_PATH)
         engine = Engine(p1, p2)
 
         client = Client("127.0.0.1", port=port)
@@ -269,8 +269,8 @@ def _run_headless_game(port: int) -> tuple[list, dict, bool]:
                 on_state=lambda board, last_action: None,
                 on_no_moves=lambda board, last_action: None,
                 on_your_turn=lambda board, roll, ids, last_action: ids[0],
-                on_game_over=lambda board, name, action: winner_names.__setitem__(
-                    "client_side", name
+                on_game_over=lambda board, winner_idx, action: winner_names.__setitem__(
+                    "client_side", winner_idx
                 ),
             )
             protocol.run()
@@ -317,12 +317,12 @@ class TestFullGameIntegration(unittest.TestCase):
             server.start()
             server.wait_for_client()
 
-            p1 = Player("Host", P1_PATH, "●")
-            p2 = Player("Client", P2_PATH, "●")
+            p1 = Player(0, "Host", P1_PATH)
+            p2 = Player(1, "Client", P2_PATH)
             engine = Engine(p1, p2)
 
-            def _on_game_over(name):
-                final["winner"] = name
+            def _on_game_over(winner_idx: int):
+                final["winner_idx"] = winner_idx
                 final["p1_done"] = all(p.progress == FINISH for p in p1.pieces)
                 final["p2_done"] = all(p.progress == FINISH for p in p2.pieces)
 
@@ -346,8 +346,8 @@ class TestFullGameIntegration(unittest.TestCase):
         host_t.start()
         time.sleep(0.05)  # let host bind and listen
 
-        p1 = Player("Host", P1_PATH, "●")
-        p2 = Player("Client", P2_PATH, "●")
+        p1 = Player(0, "Host", P1_PATH)
+        p2 = Player(1, "Client", P2_PATH)
         engine = Engine(p1, p2)
         client = Client("127.0.0.1", port=port)
         client.connect()
@@ -359,13 +359,12 @@ class TestFullGameIntegration(unittest.TestCase):
             on_state=lambda board, last_action: None,
             on_no_moves=lambda board, last_action: None,
             on_your_turn=lambda board, roll, ids, last_action: ids[0],
-            on_game_over=lambda board, name, action: None,
+            on_game_over=lambda board, winner_idx, action: None,
         ).run()
         client.close()
         host_t.join(timeout=30)
 
-        winner = final["winner"]
-        if winner == "Host":
+        if final["winner_idx"] == 0:
             self.assertTrue(final["p1_done"])
         else:
             self.assertTrue(final["p2_done"])
@@ -377,6 +376,234 @@ class TestFullGameIntegration(unittest.TestCase):
             self.assertFalse(timed_out)
             self.assertEqual(errors, [])
             self.assertEqual(winner_names["host_side"], winner_names["client_side"])
+
+
+def _run_rigged_game(port: int, winner_idx: int) -> tuple[int, int, bool]:
+    """
+    Run a near-finished game over real TCP where the winner is predetermined.
+
+    The winning player has 6 pieces at FINISH and 1 piece at progress 14.
+    The losing player has 2 pieces at FINISH and 5 spread across the board.
+    It is always the winning player's turn first, so a roll of 1 ends the game
+    immediately (piece 14 + 1 = FINISH).
+
+    Returns (host_winner_idx, client_winner_idx, timed_out).
+    """
+    results: dict[str, int] = {}
+
+    def _make_near_finished_engine(winning_idx: int) -> tuple[Engine, Player, Player]:
+        p1 = Player(0, "Host", P1_PATH)
+        p2 = Player(1, "Client", P2_PATH)
+        engine = Engine(p1, p2)
+        winner_player = p1 if winning_idx == 0 else p2
+        loser_player = p2 if winning_idx == 0 else p1
+        for piece in winner_player.pieces[:-1]:
+            piece.progress = FINISH
+        winner_player.pieces[-1].progress = 14
+        loser_player.pieces[0].progress = FINISH
+        loser_player.pieces[1].progress = FINISH
+        loser_player.pieces[2].progress = 10
+        loser_player.pieces[3].progress = 7
+        loser_player.pieces[4].progress = 5
+        loser_player.pieces[5].progress = 3
+        loser_player.pieces[6].progress = 1
+        engine.current_idx = winning_idx
+        return engine, p1, p2
+
+    def run_host():
+        server = Server(port=port)
+        server.start()
+        server.wait_for_client()
+        engine, p1, p2 = _make_near_finished_engine(winner_idx)
+        try:
+            HostProtocol(
+                server=server,
+                engine=engine,
+                p1=p1,
+                p2=p2,
+                on_my_turn=lambda moves, roll: moves[0],
+                on_state=lambda last_action: None,
+                on_opponent_thinking=lambda: None,
+                on_no_moves=lambda roll: None,
+                on_game_over=lambda idx: results.__setitem__("host_side", idx),
+            ).run()
+        finally:
+            server.close()
+
+    def run_client():
+        time.sleep(0.05)
+        engine, p1, p2 = _make_near_finished_engine(winner_idx)
+        client = Client("127.0.0.1", port=port)
+        client.connect()
+        try:
+            ClientProtocol(
+                client=client,
+                engine=engine,
+                on_rolling=lambda board, roll, last_action: None,
+                on_state=lambda board, last_action: None,
+                on_no_moves=lambda board, last_action: None,
+                on_your_turn=lambda board, roll, ids, last_action: ids[0],
+                on_game_over=lambda board, idx, action: results.__setitem__("client_side", idx),
+            ).run()
+        finally:
+            client.close()
+
+    host_t = threading.Thread(target=run_host)
+    client_t = threading.Thread(target=run_client)
+    host_t.start()
+    client_t.start()
+    host_t.join(timeout=10)
+    client_t.join(timeout=10)
+
+    timed_out = host_t.is_alive() or client_t.is_alive()
+    return results.get("host_side", -1), results.get("client_side", -1), timed_out
+
+
+class TestEndGameWinnerDetection(unittest.TestCase):
+    """
+    Verifies that winner_idx is reported correctly on both sides for both
+    possible outcomes (host wins / client wins) in a LAN game.
+    """
+
+    def test_host_wins_reported_correctly_on_host_side(self):
+        host_idx, _, timed_out = _run_rigged_game(get_free_port(), winner_idx=0)
+        self.assertFalse(timed_out)
+        self.assertEqual(host_idx, 0)
+
+    def test_host_wins_reported_correctly_on_client_side(self):
+        _, client_idx, timed_out = _run_rigged_game(get_free_port(), winner_idx=0)
+        self.assertFalse(timed_out)
+        self.assertEqual(client_idx, 0)
+
+    def test_client_wins_reported_correctly_on_host_side(self):
+        host_idx, _, timed_out = _run_rigged_game(get_free_port(), winner_idx=1)
+        self.assertFalse(timed_out)
+        self.assertEqual(host_idx, 1)
+
+    def test_client_wins_reported_correctly_on_client_side(self):
+        _, client_idx, timed_out = _run_rigged_game(get_free_port(), winner_idx=1)
+        self.assertFalse(timed_out)
+        self.assertEqual(client_idx, 1)
+
+    def test_winner_idx_consistent_on_both_sides(self):
+        for expected_winner in (0, 1):
+            host_idx, client_idx, timed_out = _run_rigged_game(get_free_port(), winner_idx=expected_winner)
+            self.assertFalse(timed_out)
+            self.assertEqual(host_idx, client_idx)
+            self.assertEqual(host_idx, expected_winner)
+
+    def test_host_wins_board_fully_finished(self):
+        """When host wins, all of P1's pieces must be at FINISH on both sides."""
+        port = get_free_port()
+        final: dict = {}
+
+        def run_host():
+            server = Server(port=port)
+            server.start()
+            server.wait_for_client()
+            engine, p1, p2 = _make_near_finished_engine_external(winner_idx=0)
+            try:
+                HostProtocol(
+                    server=server,
+                    engine=engine,
+                    p1=p1,
+                    p2=p2,
+                    on_my_turn=lambda moves, roll: moves[0],
+                    on_state=lambda last_action: None,
+                    on_opponent_thinking=lambda: None,
+                    on_no_moves=lambda roll: None,
+                    on_game_over=lambda idx: final.__setitem__("p1_done", all(p.progress == FINISH for p in p1.pieces)),
+                ).run()
+            finally:
+                server.close()
+
+        host_t = threading.Thread(target=run_host)
+        host_t.start()
+        time.sleep(0.05)
+
+        engine, p1, p2 = _make_near_finished_engine_external(winner_idx=0)
+        client = Client("127.0.0.1", port=port)
+        client.connect()
+        ClientProtocol(
+            client=client,
+            engine=engine,
+            on_rolling=lambda board, roll, last_action: None,
+            on_state=lambda board, last_action: None,
+            on_no_moves=lambda board, last_action: None,
+            on_your_turn=lambda board, roll, ids, last_action: ids[0],
+            on_game_over=lambda board, idx, action: None,
+        ).run()
+        client.close()
+        host_t.join(timeout=10)
+
+        self.assertTrue(final.get("p1_done"), "P1's pieces should all be at FINISH after host wins")
+
+    def test_client_wins_board_fully_finished(self):
+        """When client wins, all of P2's pieces must be at FINISH on both sides."""
+        port = get_free_port()
+        final: dict = {}
+
+        def run_host():
+            server = Server(port=port)
+            server.start()
+            server.wait_for_client()
+            engine, p1, p2 = _make_near_finished_engine_external(winner_idx=1)
+            try:
+                HostProtocol(
+                    server=server,
+                    engine=engine,
+                    p1=p1,
+                    p2=p2,
+                    on_my_turn=lambda moves, roll: moves[0],
+                    on_state=lambda last_action: None,
+                    on_opponent_thinking=lambda: None,
+                    on_no_moves=lambda roll: None,
+                    on_game_over=lambda idx: final.__setitem__("p2_done", all(p.progress == FINISH for p in p2.pieces)),
+                ).run()
+            finally:
+                server.close()
+
+        host_t = threading.Thread(target=run_host)
+        host_t.start()
+        time.sleep(0.05)
+
+        engine, p1, p2 = _make_near_finished_engine_external(winner_idx=1)
+        client = Client("127.0.0.1", port=port)
+        client.connect()
+        ClientProtocol(
+            client=client,
+            engine=engine,
+            on_rolling=lambda board, roll, last_action: None,
+            on_state=lambda board, last_action: None,
+            on_no_moves=lambda board, last_action: None,
+            on_your_turn=lambda board, roll, ids, last_action: ids[0],
+            on_game_over=lambda board, idx, action: None,
+        ).run()
+        client.close()
+        host_t.join(timeout=10)
+
+        self.assertTrue(final.get("p2_done"), "P2's pieces should all be at FINISH after client wins")
+
+
+def _make_near_finished_engine_external(winner_idx: int) -> tuple[Engine, Player, Player]:
+    """Same setup as _run_rigged_game's inner helper, usable from test methods."""
+    p1 = Player(0, "Host", P1_PATH)
+    p2 = Player(1, "Client", P2_PATH)
+    engine = Engine(p1, p2)
+    winner_player = p1 if winner_idx == 0 else p2
+    loser_player = p2 if winner_idx == 0 else p1
+    for piece in winner_player.pieces[:-1]:
+        piece.progress = FINISH
+    winner_player.pieces[-1].progress = 14
+    loser_player.pieces[0].progress = FINISH
+    loser_player.pieces[1].progress = FINISH
+    loser_player.pieces[2].progress = 10
+    loser_player.pieces[3].progress = 7
+    loser_player.pieces[4].progress = 5
+    loser_player.pieces[5].progress = 3
+    loser_player.pieces[6].progress = 1
+    engine.current_idx = winner_idx
+    return engine, p1, p2
 
 
 if __name__ == "__main__":

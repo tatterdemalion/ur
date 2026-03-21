@@ -7,7 +7,7 @@ Message types (server -> client):
   {"type": "state",     "last_action": str, "stats": {...}, "board": {...}}
   {"type": "your_turn", "roll": int, "valid_moves": [piece_id, ...]}
   {"type": "no_moves",  "roll": int}
-  {"type": "game_over", "winner": str}
+  {"type": "game_over", "winner_idx": int}
 
 Message types (client -> server):
   {"type": "move", "piece_id": int}

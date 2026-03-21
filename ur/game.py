@@ -55,10 +55,10 @@ class Move:
 
 
 class Player:
-    def __init__(self, name: str, path: dict, symbol: str):
+    def __init__(self, player_idx: int, name: str, path: dict):
+        self.player_idx = player_idx
         self.name = name
         self.path = path
-        self.symbol = symbol
         self.pieces = [Piece(i, self) for i in range(1, 8)]
 
     def has_won(self) -> bool:

@@ -37,8 +37,8 @@ class HostProtocol:
         Called just before blocking on the opponent's reply.
     on_no_moves : Callable[[int], None]
         Called when the current player has no valid moves; receives the roll.
-    on_game_over : Callable[[str], None]
-        Called with winner name once the game ends.
+    on_game_over : Callable[[int], None]
+        Called with winner_idx once the game ends.
     """
 
     def __init__(
@@ -51,7 +51,7 @@ class HostProtocol:
         on_state: Callable[[str], None],
         on_opponent_thinking: Callable[[], None],
         on_no_moves: Callable[[int], None],
-        on_game_over: Callable[[str], None],
+        on_game_over: Callable[[int], None],
     ):
         self.server = server
         self.engine = engine
@@ -122,14 +122,14 @@ class HostProtocol:
             self.server.send(
                 {
                     "type": msg_type,
-                    "winner": engine.winner.name if engine.winner else None,
+                    "winner_idx": engine.winner.player_idx if engine.winner else None,
                     "last_action": asdict(engine.last_action),
                     "board": engine.snapshot(),
                 }
             )
             self.on_state(engine.last_action)
 
-        self.on_game_over(engine.winner.name)
+        self.on_game_over(engine.winner.player_idx)
         return True
 
 
@@ -153,8 +153,8 @@ class ClientProtocol:
         Called when it is the client's turn. Receives board snapshot, roll,
         list of valid piece IDs, and last_action dict. Must return the chosen
         piece_id, or None to abort (returns False from run()).
-    on_game_over : Callable[[dict, str, dict], None]
-        Called with board snapshot, winner name, and last_action dict.
+    on_game_over : Callable[[dict, int, dict], None]
+        Called with board snapshot, winner_idx, and last_action dict.
     """
 
     def __init__(
@@ -165,7 +165,7 @@ class ClientProtocol:
         on_state: Callable[[dict, dict], None],
         on_no_moves: Callable[[dict, dict], None],
         on_your_turn: Callable[[dict, int, list, dict], Optional[int]],
-        on_game_over: Callable[[dict, str, dict], None],
+        on_game_over: Callable[[dict, int, dict], None],
     ):
         self.client = client
         self.engine = engine
@@ -204,5 +204,5 @@ class ClientProtocol:
                 self.client.send({"type": "move", "piece_id": piece_id})
 
             elif msg_type == "game_over":
-                self.on_game_over(msg["board"], msg["winner"], msg["last_action"])
+                self.on_game_over(msg["board"], msg["winner_idx"], msg["last_action"])
                 return True
