@@ -8,6 +8,7 @@ C_SCORE = "\033[92m"  # Green for success
 C_ITALIC = "\033[3m"        # Italic text
 C_BOLD_TEXT = "\033[1;97m"  # 1 for Bold, 97 for Bright White
 C_TEXT = "\033[97m"  # Bright White for headers, menus, and general UI text
+C_TUTORIAL = "\033[95m"  # Bright Magenta for tutorial narration
 
 NUM_CIRCLES = {1: "①", 2: "②", 3: "③", 4: "④", 5: "⑤", 6: "⑥", 7: "⑦"}
 BOARD_ROWS = 3

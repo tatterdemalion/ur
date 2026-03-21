@@ -4,9 +4,10 @@ import time
 from typing import Optional
 
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
-from ur.cli.constants import C_BOLD_TEXT, C_RESET, C_ROSETTA
+from ur.cli.constants import C_BOLD_TEXT, C_RESET
 from ur.cli.i18n import set_language, t
 from ur.cli.match import ClientMatch, HostMatch, LocalMatch
+from ur.cli.tutorial import TutorialMatch
 from ur.cli.widgets import Menu, Navigation
 from ur.saves import SaveFile, list_saves
 
@@ -29,20 +30,6 @@ class Session:
         with open(cls.FILE, "w") as f:
             json.dump(session, f)
 
-
-def show_tutorial():
-    Navigation.clear()
-    print(f"{C_BOLD_TEXT}=== {t('tutorial.title')} ==={C_RESET}\n")
-    print(t("tutorial.line1"))
-    print(t("tutorial.line2"))
-    print(t("tutorial.line3"))
-    print(t("tutorial.line4"))
-    print(t("tutorial.line4b"))
-    print(t("tutorial.line5", rosetta=f"{C_ROSETTA}✿{C_RESET}"))
-    print(f"{t('tutorial.line5b')}\n")
-    Navigation.print_commands()
-    raw = input(t("nav.press_enter_menu")).strip()
-    Navigation.check_global_commands(raw)
 
 
 def _pick_local_save_menu() -> Optional[SaveFile]:
@@ -128,6 +115,6 @@ def main_menu():
                 Session.save({"last_ip": host_ip})
                 ClientMatch(host_ip, navigation).start()
         elif choice == "tutorial":
-            show_tutorial()
+            TutorialMatch(navigation).start()
         elif choice == "language":
             _language_menu()

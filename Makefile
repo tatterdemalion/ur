@@ -1,4 +1,4 @@
-.PHONY: install test lint format simulate play
+.PHONY: install test lint format simulate play tutorial
 
 PYTHON = .venv/bin/python
 
@@ -24,3 +24,6 @@ watch:
 
 play:
 	$(PYTHON) -m ur.play
+
+tutorial:
+	TUTORIAL_STEP=$(or $(STEP),1) $(PYTHON) -m ur.play
