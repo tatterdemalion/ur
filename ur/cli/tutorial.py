@@ -80,7 +80,7 @@ class TutorialMatch(Match):
         Returns False if the user navigated away (menu/quit), True otherwise."""
         piece_sym = f"{C_P1}{chr(9312 + move.piece.identifier - 1)}{C_RESET}"
         while True:
-            raw = input(f"{C_TUTORIAL}[Enter for {piece_sym}{C_TUTORIAL}]:{C_RESET} ").strip()
+            raw = input(f"{C_TUTORIAL}[ Enter for {piece_sym}{C_TUTORIAL} ]:{C_RESET} ").strip()
             if not raw:
                 return True
             if self.navigation.check_global_commands(raw):
