@@ -87,7 +87,7 @@ class GameUtils:
             print(f"  {piece_symbols} : {status} -> {target_str}{hint}")
 
     @classmethod
-    def get_human_move(cls, valid_moves: list[Move], p2: Player, bot_name: str, navigation: "Navigation", redraw=None) -> Optional[Move]:
+    def get_human_move(cls, valid_moves: list[Move], p2: Player, bot_name: str, navigation: "Navigation") -> Optional[Move]:
         valid_moves.sort(key=lambda m: m.piece.progress, reverse=True)
         groups = cls._build_move_groups(valid_moves, p2, bot_name)
 
@@ -108,16 +108,12 @@ class GameUtils:
 
             if raw_input.lower() == "help":
                 help_open = True
-                if redraw is not None:
-                    redraw(show_labels=True)
                 cls._print_move_options(groups)
                 navigation.print_commands(f"{C_BOARD}{t('nav.ingame_help_open_hint')}{C_RESET}")
                 continue
 
             if raw_input.lower() == "back" and help_open:
                 help_open = False
-                if redraw is not None:
-                    redraw(show_labels=False)
                 navigation.print_commands(f"{C_BOARD}{t('nav.ingame_commands_hint')}{C_RESET}")
                 continue
 

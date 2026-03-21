@@ -1,4 +1,6 @@
 import time
+from dataclasses import dataclass
+from typing import Callable, Optional
 
 from ur.ai.bots import Bot
 from ur.cli.board import Board
@@ -7,7 +9,7 @@ from ur.cli.i18n import t
 from ur.cli.match import Match
 from ur.cli.utils import GameUtils
 from ur.game import Action, ActionType, Engine, Move, Player
-from ur.rules import P1_PATH, P2_PATH
+from ur.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
 
 
 def _make_snapshot(p1_pieces: dict[int, int], p2_pieces: dict[int, int]) -> dict:
@@ -16,6 +18,20 @@ def _make_snapshot(p1_pieces: dict[int, int], p2_pieces: dict[int, int]) -> dict
         "p1_pieces": {str(i): p1_pieces.get(i, 0) for i in range(1, 8)},
         "p2_pieces": {str(i): p2_pieces.get(i, 0) for i in range(1, 8)},
     }
+
+
+@dataclass
+class TutorialStep:
+    step_num: int
+    narrate_key: str
+    active_player_idx: int
+    rigged_roll: int
+    allowed_piece_ids: list[int]
+    bot_move_id: Optional[int] = None
+    board_setup: Optional[dict] = None
+    scene_narrate_key: Optional[str] = None  # narrated + paused before board setup
+    pre_turn_hook: Optional[Callable[["TutorialMatch"], None]] = None
+    is_free_choice: bool = False
 
 
 class TutorialEngine(Engine):
@@ -50,6 +66,12 @@ class TutorialBot(Bot):
                 raise RuntimeError("Tutorial script asked for invalid bot move!")
             return chosen
         return valid_moves[0]
+
+
+# Build the step table after TutorialMatch is defined (forward reference resolved via lambda).
+# Steps are defined as a module-level constant after the class definition.
+
+TUTORIAL_STEPS: "list[TutorialStep]" = []  # populated below
 
 
 class TutorialMatch(Match):
@@ -107,6 +129,30 @@ class TutorialMatch(Match):
         time.sleep(1)
         self.navigation.clear()
 
+    def _play_bot_turns(self):
+        """Play out any extra bot turns that follow a human rosetta landing."""
+        while self.engine.current_player == self.p2:
+            roll = self.engine.roll_dice()
+            valid_moves = self.engine.get_valid_moves(roll)
+            self.update_display(show_labels=True)
+            GameUtils.animate_dice(
+                t("match.opponent_turn", name=self.p2.name), C_P2, roll
+            )
+            if not valid_moves:
+                self.engine.skip_turn(roll)
+                self._pause()
+                continue
+            state = {
+                "my_pieces": sorted([p.progress for p in self.engine.current_player.pieces]),
+                "opp_pieces": sorted([p.progress for p in self.engine.opponent.pieces]),
+                "current_roll": roll,
+            }
+            chosen = self._bot.choose_move(state, valid_moves, self.engine.current_player)
+            time.sleep(1.2)
+            self.engine.execute_move(chosen, roll)
+            self.update_display(show_labels=True)
+            self._pause()
+
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
@@ -122,78 +168,33 @@ class TutorialMatch(Match):
             )
             self._pause()
 
-        tutorial_step = start_step
-        allowed_piece_ids: list[int] = []
-        color_kwargs = dict(
-            p1=C_P1, p2=C_P2, p2_name=self.p2.name,
-            rosetta=C_ROSETTA, bold=C_BOLD_TEXT,
-            reset=C_RESET + C_TUTORIAL,
-        )
-
-        while tutorial_step <= 7:
-            # ── A. Step setup ────────────────────────────────────────────
-            if tutorial_step == 1:
-                # P1 rolls 2, enters the board.
-                self.engine.current_idx = 0
-                self.engine.rigged_roll = 2
-                allowed_piece_ids = [1]
-
-            elif tutorial_step == 2:
-                # Bot's turn: P2 rolls 1, moves piece 1.
-                self.engine.current_idx = 1
-                self.engine.rigged_roll = 1
-                self._bot.rigged_move_id = 1
-
-            elif tutorial_step == 3:
-                # P1 rolls 2, piece 1 lands on rosetta (progress 4 = coord (2,0)).
-                self.engine.current_idx = 0
-                self.engine.rigged_roll = 2
-                allowed_piece_ids = [1]
-
-            elif tutorial_step == 4:
-                # Extra turn from the rosetta — P1 rolls 3, advances piece 1.
-                # current_idx stays 0 (engine didn't switch after rosetta).
-                self.engine.rigged_roll = 3
-                allowed_piece_ids = [1]
-
-            elif tutorial_step == 5:
-                # P1① at 6=(1,1), P2① at 9=(1,4). Roll 3: ①→9=(1,4), captures P2①.
-                self._narrate("tuto.scene5", **color_kwargs)
+        for step_data in TUTORIAL_STEPS[start_step - 1:]:
+            # 1. Scene intro narration (before board teleport)
+            if step_data.scene_narrate_key:
+                self._narrate(
+                    step_data.scene_narrate_key,
+                    p1=C_P1, p2=C_P2, p2_name=self.p2.name,
+                    rosetta=C_ROSETTA, bold=C_BOLD_TEXT, reset=C_RESET + C_TUTORIAL,
+                )
                 self._pause()
-                self.engine.restore(_make_snapshot({1: 6}, {1: 9}))
-                self.engine.current_idx = 0
-                self._reset_last_action()
-                self.engine.rigged_roll = 3
-                allowed_piece_ids = [1]
 
-            elif tutorial_step == 6:
-                # P1① at 5=(1,0) = square e. P2② at 8=(1,3)✿ central rosetta.
-                # Roll 3: ①+3=8 is blocked by the safe rosetta, so only ② (0→3) is valid.
-                # The player sees ① sitting right next to the rosetta but unable to capture.
-                self._narrate("tuto.scene6", **color_kwargs)
-                self._pause()
-                self.engine.restore(_make_snapshot({1: 5}, {1: 0, 2: 8}))
-                self.engine.current_idx = 0
+            # 2. Apply Board Setup & State
+            if step_data.board_setup:
+                self.engine.restore(step_data.board_setup)
                 self._reset_last_action()
-                self.engine.rigged_roll = 3
-                allowed_piece_ids = []  # ① is blocked by engine rules, only ② valid
 
-            elif tutorial_step == 7:
-                # P1① at 12 (from step 6). Roll 3 → 15=FINISH, scores.
-                self._narrate("tuto.scene7", **color_kwargs)
-                self._pause()
-                self.engine.restore(_make_snapshot({1: 12}, {1: 0, 2: 8}))
-                self.engine.current_idx = 0
-                self._reset_last_action()
-                self.engine.rigged_roll = 3
-                allowed_piece_ids = [1]
+            self.engine.current_idx = step_data.active_player_idx
+            self.engine.rigged_roll = step_data.rigged_roll
+            if step_data.bot_move_id is not None:
+                self._bot.rigged_move_id = step_data.bot_move_id
 
-            # ── B. Turn execution ────────────────────────────────────────
+            # 3. Pre-Turn Hook
+            if step_data.pre_turn_hook:
+                step_data.pre_turn_hook(self)
+
+            # 4. Execute Turn Loop (Roll, Valid Moves, Animate)
             roll = self.engine.roll_dice()
             valid_moves = self.engine.get_valid_moves(roll)
-
-            if tutorial_step == 1:
-                self._show_dice_explainer()
 
             is_human_turn = self.engine.current_player == self.p1
             player_color = C_P1 if is_human_turn else C_P2
@@ -203,49 +204,40 @@ class TutorialMatch(Match):
                 else t("match.opponent_turn", name=self.p2.name)
             )
 
-            # Formatted roll string: coloured dots + italic count, e.g. "●● (2)".
-            dots = f"{C_P1}{'●' * roll}{'○' * (4 - roll)}{C_RESET + C_TUTORIAL}"
-            roll_str = f"{dots} {C_ITALIC}({roll}){C_RESET + C_TUTORIAL}"
-
-            hint_text = t(f"tuto.step{tutorial_step}.hint", roll=roll_str, **color_kwargs)
-
-            def _redraw(show_labels: bool = True):
-                self.update_display(show_labels=show_labels)
-                print(f"\n{C_TUTORIAL}{hint_text}{C_RESET}\n")
-
             self.update_display(show_labels=True)
             GameUtils.animate_dice(turn_text, player_color, roll)
+
+            # Print Tutorial Hint
+            dots = f"{C_P1}{'●' * roll}{'○' * (4 - roll)}{C_RESET + C_TUTORIAL}"
+            roll_str = f"{dots} {C_ITALIC}({roll}){C_RESET + C_TUTORIAL}"
+            hint_text = t(
+                step_data.narrate_key + ".hint",
+                roll=roll_str, p1=C_P1, p2=C_P2, p2_name=self.p2.name,
+                rosetta=C_ROSETTA, bold=C_BOLD_TEXT, reset=C_RESET + C_TUTORIAL,
+            )
             print(f"\n{C_TUTORIAL}{hint_text}{C_RESET}\n")
 
+            # 5. Get Move & Execute
             if not valid_moves:
-                # Should not happen in a well-scripted tutorial, but handle gracefully.
                 self.engine.skip_turn(roll)
-                tutorial_step += 1
                 self._pause()
                 continue
 
             if is_human_turn:
-                restricted_moves = [m for m in valid_moves if m.piece.identifier in allowed_piece_ids]
-                if not restricted_moves:
-                    restricted_moves = valid_moves
+                restricted_moves = (
+                    [m for m in valid_moves if m.piece.identifier in step_data.allowed_piece_ids]
+                    if step_data.allowed_piece_ids
+                    else valid_moves
+                )
 
-                if tutorial_step <= 3:
-                    # Steps 1–3: piece is pre-selected, just wait for Enter.
+                if not step_data.is_free_choice:
                     chosen_move = restricted_moves[0]
                     if not self._get_confirmed_move(chosen_move):
                         return
-                elif tutorial_step == 4:
-                    # Step 4: free choice, help hints available.
-                    chosen_move = GameUtils.get_human_move(
-                        valid_moves, self.p2, self.p2.name, self.navigation,
-                        redraw=_redraw,
-                    )
-                    if chosen_move is None:
-                        return
                 else:
                     chosen_move = GameUtils.get_human_move(
-                        restricted_moves, self.p2, self.p2.name, self.navigation,
-                        redraw=_redraw,
+                        restricted_moves if restricted_moves else valid_moves,
+                        self.p2, self.p2.name, self.navigation,
                     )
                     if chosen_move is None:
                         return
@@ -262,11 +254,84 @@ class TutorialMatch(Match):
             piece_sym = f"{C_P1}{chr(9312 + chosen_move.piece.identifier - 1)}{C_RESET + C_TUTORIAL}"
             self.engine.execute_move(chosen_move, roll)
             self.update_display(show_labels=True)
-            self._narrate(f"tuto.step{tutorial_step}", piece=piece_sym, **color_kwargs)
-            tutorial_step += 1
+            self._narrate(
+                step_data.narrate_key,
+                piece=piece_sym, p1=C_P1, p2=C_P2, p2_name=self.p2.name,
+                rosetta=C_ROSETTA, bold=C_BOLD_TEXT, reset=C_RESET + C_TUTORIAL,
+            )
             self._pause()
 
-        # ── Outro ────────────────────────────────────────────────────────
+            # 6. Intercept Bot Extra Turns
+            if is_human_turn and chosen_move.target_coord in ROSETTAS and chosen_move.target_progress < FINISH:
+                self._play_bot_turns()
+
         self._narrate("tuto.outro")
         self._pause()
         self.navigation.clear()
+
+
+# ---------------------------------------------------------------------------
+# Step table — defined after TutorialMatch so lambdas can reference it
+# ---------------------------------------------------------------------------
+
+TUTORIAL_STEPS = [
+    TutorialStep(
+        step_num=1,
+        narrate_key="tuto.step1",
+        active_player_idx=0,
+        rigged_roll=2,
+        allowed_piece_ids=[1],
+        pre_turn_hook=lambda m: m._show_dice_explainer(),
+    ),
+    TutorialStep(
+        step_num=2,
+        narrate_key="tuto.step2",
+        active_player_idx=1,
+        rigged_roll=1,
+        allowed_piece_ids=[],
+        bot_move_id=1,
+    ),
+    TutorialStep(
+        step_num=3,
+        narrate_key="tuto.step3",
+        active_player_idx=0,
+        rigged_roll=2,
+        allowed_piece_ids=[1],
+    ),
+    TutorialStep(
+        step_num=4,
+        narrate_key="tuto.step4",
+        active_player_idx=0,
+        rigged_roll=3,
+        allowed_piece_ids=[1],
+        is_free_choice=True,
+    ),
+    TutorialStep(
+        step_num=5,
+        narrate_key="tuto.step5",
+        active_player_idx=0,
+        rigged_roll=3,
+        allowed_piece_ids=[1],
+        board_setup=_make_snapshot({1: 6}, {1: 9}),
+        scene_narrate_key="tuto.scene5",
+    ),
+    TutorialStep(
+        step_num=6,
+        narrate_key="tuto.step6",
+        active_player_idx=0,
+        rigged_roll=3,
+        allowed_piece_ids=[],  # ① blocked by engine rules, only ② valid
+        board_setup=_make_snapshot({1: 5}, {1: 0, 2: 8}),
+        scene_narrate_key="tuto.scene6",
+    ),
+    TutorialStep(
+        step_num=7,
+        narrate_key="tuto.step7",
+        active_player_idx=0,
+        rigged_roll=3,
+        allowed_piece_ids=[1],
+        board_setup=_make_snapshot({1: 12}, {1: 0, 2: 8}),
+        scene_narrate_key="tuto.scene7",
+        is_free_choice=True,
+    ),
+]
