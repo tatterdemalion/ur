@@ -14,6 +14,7 @@ from ur.cli.constants import (
     NUM_CIRCLES,
     TEMPLATE,
 )
+from ur.cli.i18n import t
 from ur.game import Engine, Piece, Player
 from ur.rules import FINISH, ROSETTAS
 
@@ -61,7 +62,7 @@ class Board:
         name_display = f"  {C_TEXT}{self.game_name}{C_RESET}" if self.game_name else ""
 
         game_screen = f"""
-{C_BOLD_TEXT}=== THE ROYAL GAME OF UR ==={C_RESET}{name_display}
+{C_BOLD_TEXT}=== {t('board.title')} ==={C_RESET}{name_display}
 
         {top_line}
         {top_waiting_line}
@@ -76,8 +77,8 @@ class Board:
         cells = {}
         letter_code = 97  # ASCII code for 'a'
 
-        is_my_turn = self.engine.current_player == self._local
-        path_letters = {self._bottom.path[i]: chr(96 + i) for i in range(1, 15)}
+        bottom_path_letters = {bottom.path[i]: chr(96 + i) for i in range(1, 15)}
+        top_path_letters = {top.path[i]: chr(96 + i) for i in range(1, 15)}
 
         row_order = range(BOARD_ROWS - 1, -1, -1) if self._local is self.p2 else range(BOARD_ROWS)
 
@@ -88,12 +89,13 @@ class Board:
                     continue
 
                 on_rosetta = coord in ROSETTAS
-                path_char = path_letters.get(coord, " ")
+                bottom_char = bottom_path_letters.get(coord, " ")
+                top_char = top_path_letters.get(coord, " ")
 
                 if on_rosetta:
                     content = f"{C_ROSETTA}✿{C_BOARD}"
-                elif is_my_turn and path_char != " ":
-                    content = f"{C_BOARD}{path_char}{C_BOARD}"
+                elif bottom_char != " " or top_char != " ":
+                    content = bottom_char if bottom_char != " " else top_char
                 else:
                     content = " "
 

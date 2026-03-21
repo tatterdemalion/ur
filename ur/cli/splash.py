@@ -3,6 +3,7 @@ import sys
 import time
 
 from ur.cli.constants import C_BOARD, C_P1, C_P2, C_RESET, C_ROSETTA, C_TEXT
+from ur.cli.i18n import t
 
 LOGO = f"""
 {C_BOARD}════════════════════════════════════════════════════════════════{C_RESET}
@@ -19,12 +20,12 @@ LOGO = f"""
 {C_BOARD}════════════════════════════════════════════════════════════════{C_RESET}
 """
 
-TASKS = [
-    "Sweeping sand off the board...",
-    "Carving lapis lazuli...",
-    "Consulting the Oracles...",
-    "Rolling the tetrahedrons...",
-    "Waking the Gods...",
+_TASK_KEYS = [
+    "splash.task.0",
+    "splash.task.1",
+    "splash.task.2",
+    "splash.task.3",
+    "splash.task.4",
 ]
 
 def animate_loading():
@@ -90,8 +91,8 @@ def animate_loading():
         bar = f"[{filled}{empty}{C_RESET}]"
 
         # Pick a funny thematic task based on percentage
-        task_idx = min(int(percent * len(TASKS)), len(TASKS) - 1)
-        task = TASKS[task_idx]
+        task_idx = min(int(percent * len(_TASK_KEYS)), len(_TASK_KEYS) - 1)
+        task = t(_TASK_KEYS[task_idx])
 
         print(f"{bar} {int(percent * 100)}% {C_TEXT}{task:<30}{C_RESET}")
 
@@ -99,7 +100,7 @@ def animate_loading():
         time.sleep(random.uniform(0.02, 0.06))
 
     time.sleep(0.5)
-    print(f"\n        {C_ROSETTA}Press Enter to step into the past...{C_RESET}")
+    print(f"\n        {C_ROSETTA}{t('splash.press_enter')}{C_RESET}")
     input()
 
 if __name__ == "__main__":
