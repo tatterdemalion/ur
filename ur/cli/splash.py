@@ -41,24 +41,42 @@ def animate_loading():
         # ANSI Magic: Move cursor up 2 lines (\033[2A), return to start (\r), clear to bottom (\033[J)
         sys.stdout.write("\033[2A\r\033[J")
 
-        # --- 1. THE "MINI GAME" ANIMATION (The Chase) ---
+        # --- 1. THE CINEMATIC CHASE ANIMATION ---
         track = [" "] * bar_length
         p1_pos = i
-        p2_pos = i if i == bar_length else i - random.randint(1, 3)
+
+        # Scripted Offset Logic for Red Piece
+        if i < 8:
+            offset = -2               # Starts behind
+        elif i < 14:
+            offset = min(2, i - 9)    # Accelerates past Cyan
+        elif i < 22:
+            offset = 2                # Holds the lead
+        elif i < 29:
+            offset = max(-3, 23 - i)  # Slows down, Cyan catches up
+        elif i < 35:
+            offset = -3               # Trails behind
+        else:
+            offset = 0                # Sprints at the end to catch up!
+
+        p2_pos = i + offset
 
         # Draw the chasing opponent
         if 0 <= p2_pos < bar_length:
             track[p2_pos] = f"{C_P2}●{C_RESET}"
 
-        # Draw the fleeing player
+        # Draw the fleeing player (Drawn second so it overlays Red if they clash)
         if 0 <= p1_pos < bar_length:
             track[p1_pos] = f"{C_P1}①{C_RESET}"
 
         # Draw the safe Rosetta at the very end of the track
         if p1_pos < bar_length:
-            track[-1] = f"{C_ROSETTA}✿{C_RESET}"
-        elif p1_pos == bar_length:
-            # When the player reaches the end, they land on the Rosetta!
+            # If the spot is empty, draw a flower. If a piece is there, don't overwrite it!
+            if track[-1] == " ":
+                track[-1] = f"{C_ROSETTA}✿{C_RESET}"
+        elif p1_pos >= bar_length:
+            # Photo-finish! Cyan hits the Rosetta, Red stops exactly 1 space behind.
+            track[-1] = f"{C_P2}●{C_RESET}"
             track[-1] = f"{C_ROSETTA}①{C_RESET}"
 
         print("".join(track))
@@ -77,8 +95,9 @@ def animate_loading():
 
         print(f"{bar} {int(percent * 100)}% {C_TEXT}{task:<30}{C_RESET}")
 
-        # Randomize the sleep timer so it feels like it's actually "loading" things
-        time.sleep(random.uniform(0.01, 0.08))
+        # Smooth, slightly randomized sleep timer so it feels natural
+        time.sleep(random.uniform(0.02, 0.06))
+
     time.sleep(0.5)
     print(f"\n        {C_ROSETTA}Press Enter to step into the past...{C_RESET}")
     input()
