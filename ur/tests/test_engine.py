@@ -1,6 +1,7 @@
+import dataclasses
 import unittest
 
-from ur.game import ActionType, Engine, Move, Player
+from ur.game import Action, ActionType, Engine, Move, Player
 from ur.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
 
 
@@ -288,6 +289,23 @@ class TestExecuteMove(unittest.TestCase):
         self.assertTrue(self.p1.has_won())
         # current_idx stays at 0 — no switch after a win
         self.assertEqual(self.game.current_idx, 0)
+
+
+class TestActionSerialization(unittest.TestCase):
+    def test_action_serialization_roundtrip(self):
+        original = Action(
+            player_idx=1,
+            roll=2,
+            piece_id=3,
+            action_type=ActionType.MOVED,
+            hit=False,
+            rosetta=False,
+            target_progress=8,
+        )
+        serialized = dataclasses.asdict(original)
+        restored = Action(**serialized)
+        self.assertEqual(restored, original)
+        self.assertEqual(restored.target_progress, 8)
 
 
 if __name__ == "__main__":

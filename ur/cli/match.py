@@ -111,7 +111,7 @@ class LocalMatch(Match):
                 continue
 
             if self.engine.current_player == self.p1:
-                chosen_move = GameUtils.get_human_move(valid_moves, self.p2, self.bot.name)
+                chosen_move = GameUtils.get_human_move(valid_moves, self.p2, self.bot.name, self.navigation)
                 if chosen_move is None:
                     return  # Abort to menu
             else:
@@ -205,7 +205,7 @@ class HostMatch(Match):
             def on_my_turn(valid_moves: list, roll: int):
                 self.update_display()
                 GameUtils.animate_dice("Your", C_P1, roll)
-                return GameUtils.get_human_move(valid_moves, self.p2, "Opponent")
+                return GameUtils.get_human_move(valid_moves, self.p2, "Opponent", self.navigation)
 
             def on_state(last_action):
                 self.save_state("lan")
@@ -259,7 +259,7 @@ class ClientMatch(Match):
         print(f"Connecting to {self.host_ip}:{PORT}...")
         try:
             self.client.connect()
-        except Exception:
+        except (ConnectionRefusedError, OSError, socket.timeout):
             self.show_message(f"{C_P2}Failed to connect to host.{C_RESET}", 2.0)
             return
 
@@ -303,7 +303,7 @@ class ClientMatch(Match):
                 valid_moves = [m for m in valid_moves if m.piece.identifier in set(valid_move_ids)]
                 self.update_display()
                 GameUtils.animate_dice("Your", C_P1, roll)
-                chosen_move = GameUtils.get_human_move(valid_moves, self.p1, "Host")
+                chosen_move = GameUtils.get_human_move(valid_moves, self.p1, "Host", self.navigation)
                 if chosen_move is None:
                     return None
                 return chosen_move.piece.identifier
@@ -324,7 +324,7 @@ class ClientMatch(Match):
             )
             protocol.run()
 
-        except (ConnectionError, OSError):
+        except (ConnectionRefusedError, OSError, socket.timeout):
             self.handle_disconnect()
 
         finally:

@@ -130,6 +130,7 @@ class SaveFile:
                 action_type=ActionType.STARTED,
                 hit=False,
                 rosetta=False,
+                target_progress=None,
             )
         return engine, p1, p2
 

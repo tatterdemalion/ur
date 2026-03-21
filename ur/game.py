@@ -79,6 +79,7 @@ class Engine:
             action_type=ActionType.STARTED,
             hit=False,
             rosetta=False,
+            target_progress=None,
         )
 
     @property

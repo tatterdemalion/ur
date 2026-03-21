@@ -47,9 +47,7 @@ class GameUtils:
         return f" — {' '.join(hints)}" if hints else ""
 
     @classmethod
-    def get_human_move(cls, valid_moves: list[Move], p2: Player, bot_name: str) -> Optional[Move]:
-        from ur.cli.menu import Navigation
-
+    def get_human_move(cls, valid_moves: list[Move], p2: Player, bot_name: str, navigation) -> Optional[Move]:
         print("Your options:")
         valid_moves.sort(key=lambda m: m.piece.identifier)
 
@@ -60,11 +58,11 @@ class GameUtils:
                 f"  {C_P1}{NUM_CIRCLES[move.piece.identifier]}{C_RESET} : {status} -> Square {move.target_progress}{hint_text}"
             )
 
-        Navigation.print_commands()
+        navigation.print_commands()
         while True:
             raw_input = input("\nSelect a piece to move (1-7): ").strip()
 
-            if Navigation.check_global_commands(raw_input):
+            if navigation.check_global_commands(raw_input):
                 return None
 
             try:

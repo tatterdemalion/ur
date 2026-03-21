@@ -3,7 +3,7 @@ import unittest
 from ur.cli.board import Board
 from ur.cli.menu import Navigation
 from ur.cli.utils import GameUtils
-from ur.game import Engine, Move, Player
+from ur.game import Action, ActionType, Engine, Move, Player
 from ur.rules import P1_PATH, P2_PATH
 
 
@@ -137,6 +137,26 @@ class TestClientCurrentIdx(unittest.TestCase):
 
         self.assertEqual(move.piece.progress, 2)
         self.assertEqual(move.target_progress, 3)
+
+
+class TestFormatActionPerspective(unittest.TestCase):
+    def test_format_action_perspective(self):
+        action = Action(
+            player_idx=1,
+            roll=2,
+            piece_id=3,
+            action_type=ActionType.MOVED,
+            hit=False,
+            rosetta=False,
+            target_progress=5,
+        )
+        # When local_player_idx matches action.player_idx, subject is "You"
+        result_local = GameUtils.format_action(action, local_player_idx=1, opponent_name="Alice")
+        self.assertTrue(result_local.startswith("You"), f"Expected 'You...', got: {result_local!r}")
+
+        # When local_player_idx does NOT match, subject is the opponent's name
+        result_remote = GameUtils.format_action(action, local_player_idx=0, opponent_name="Alice")
+        self.assertTrue(result_remote.startswith("Alice"), f"Expected 'Alice...', got: {result_remote!r}")
 
 
 if __name__ == "__main__":
