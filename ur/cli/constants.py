@@ -9,11 +9,25 @@ C_ITALIC = "\033[3m"        # Italic text
 C_BOLD_TEXT = "\033[1;97m"  # 1 for Bold, 97 for Bright White
 C_TEXT = "\033[97m"  # Bright White for headers, menus, and general UI text
 C_TUTORIAL = "\033[95m"  # Bright Magenta for tutorial narration
+C_HOVER = "\033[46m\033[30m"  # Cyan background, Black text for Hover State
 
 NUM_CIRCLES = {1: "①", 2: "②", 3: "③", 4: "④", 5: "⑤", 6: "⑥", 7: "⑦"}
 BOARD_ROWS = 3
 BOARD_COLUMNS = 8
 MISSING_CELLS = ((0, 4), (0, 5), (2, 4), (2, 5))
+
+LOGO = [
+    f"{C_BOARD}════════════════════════════════════════════════════════{C_RESET}",
+    f"{C_ROSETTA}            T H E   R O Y A L   G A M E   O F{C_RESET}",
+    "",
+    f"{C_P1}                   ██╗   ██╗██████╗{C_RESET}",
+    f"{C_P1}                   ██║   ██║██╔══██╗{C_RESET}",
+    f"{C_P1}                   ██║   ██║██████╔╝{C_RESET}",
+    f"{C_P1}                   ██║   ██║██╔══██╗{C_RESET}",
+    f"{C_P1}                   ╚██████╔╝██║  ██║{C_RESET}",
+    f"{C_P1}                    ╚═════╝ ╚═╝  ╚═╝{C_RESET}",
+    f"{C_BOARD}════════════════════════════════════════════════════════{C_RESET}"
+]
 
 TEMPLATE = """\
 ╔═══╦═══╦═══╦═══╗       ╔═══╦═══╗
@@ -31,13 +45,13 @@ VICTORY_ART = f"""
       /                                         \\
      |    {C_ROSETTA}𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭{C_BOARD}    |
      |  ═══════════════════════════════════════  |
-     |                                           |
+     |                                         |
      |       {C_P1}V I C T O R Y   A T   U R !{C_BOARD}         |
-     |                                           |
+     |                                         |
      |  ───────────────────────────────────────  |
      |        {C_TEXT}T H E   G O D S   S M I L E{C_BOARD}        |
      |            {C_TEXT}U P O N   Y O U{C_BOARD}                |
-     |                                           |
+     |                                         |
      |    {C_ROSETTA}𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭 ☼ 𒀭{C_BOARD}    |
       \\_________________________________________/ {C_RESET}
 """

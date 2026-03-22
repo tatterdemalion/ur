@@ -1,10 +1,11 @@
 import json
 import os
+import sys
 import time
 from typing import Optional
 
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
-from ur.cli.constants import C_BOLD_TEXT, C_RESET
+from ur.cli.constants import C_BOLD_TEXT, C_RESET, C_P1, C_TEXT
 from ur.cli.i18n import set_language, t
 from ur.cli.match import ClientMatch, HostMatch, LocalMatch
 from ur.cli.tutorial import TutorialMatch
@@ -84,6 +85,11 @@ def main_menu():
         menu.add(t("menu.language"), "language")
 
         choice = menu.prompt()
+
+        # Handle Q or ESC from the main menu by gracefully exiting
+        if choice is None:
+            Navigation.clear()
+            sys.exit()
 
         if choice == "play":
             bot = select_bot_menu()
