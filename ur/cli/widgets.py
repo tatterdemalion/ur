@@ -12,16 +12,22 @@ from ur.cli.i18n import t
 # Regex to strip ANSI colors so we can calculate string length for centering
 ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
+
 def get_keystroke() -> str:
     """Reads a raw keystroke from the terminal."""
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
     try:
         tty.setraw(fd)
-        ch = sys.stdin.read(1)
+        # Use os.read to bypass Python's sys.stdin buffer
+        ch_bytes = os.read(fd, 1)
+        ch = ch_bytes.decode('utf-8', 'replace')
+
         if ch == '\x1b':
-            if select.select([sys.stdin], [], [], 0.01)[0]:
-                ch += sys.stdin.read(2)
+            # Wait 50ms to see if this is an arrow key sequence
+            if select.select([fd], [], [], 0.05)[0]:
+                ch_bytes += os.read(fd, 2)
+                ch = ch_bytes.decode('utf-8', 'replace')
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     return ch
@@ -127,9 +133,10 @@ class Menu:
             self._render(selected_idx, cols, lines)
             key = get_keystroke()
 
-            if key == '\x1b[A': # Up Arrow
+            # Account for standard ANSI arrows and alternate application cursor keys
+            if key in ('\x1b[A', '\x1bOA'): # Up Arrow
                 selected_idx = (selected_idx - 1) % len(self.options)
-            elif key == '\x1b[B': # Down Arrow
+            elif key in ('\x1b[B', '\x1bOB'): # Down Arrow
                 selected_idx = (selected_idx + 1) % len(self.options)
             elif key in ('\r', '\n'): # Enter
                 return self.options[selected_idx][1]
