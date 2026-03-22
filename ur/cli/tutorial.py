@@ -4,7 +4,7 @@ from typing import Callable, Optional
 
 from ur.ai.bots import Bot
 from ur.cli.board import Board
-from ur.cli.constants import C_BOLD_TEXT, C_ITALIC, C_P1, C_P2, C_RESET, C_ROSETTA, C_TUTORIAL
+from ur.cli.constants import C_BOARD, C_BOLD_TEXT, C_ITALIC, C_P1, C_P2, C_RESET, C_ROSETTA, C_TUTORIAL, TEMPLATE
 from ur.cli.i18n import t
 from ur.cli.match import Match
 from ur.cli.utils import GameUtils
@@ -52,7 +52,7 @@ class TutorialEngine(Engine):
 class TutorialBot(Bot):
     """Bot that moves a specific piece ID set by the state machine each turn."""
 
-    name = "Ur-Namma"
+    name:str = "Ur-Namma"
 
     def __init__(self):
         self.rigged_move_id: "int | None" = None
@@ -115,6 +115,82 @@ class TutorialMatch(Match):
             action_type=ActionType.STARTED, hit=False, rosetta=False,
         )
 
+    def _show_path_explainer(self):
+        """Draws the board using arrows to animate the path logic for both players."""
+        rosettas = ['a', 'e', 'j', 'o', 's']
+
+        def draw_state(current_cells: dict, p1_text: str = "", p2_text: str = ""):
+            self.navigation.clear()
+            title = t("tuto.board_title")
+            print(f"{C_BOLD_TEXT}=== {title} ==={C_RESET}\n")
+
+            # Wrap the visual character (arrow, space, or flower) in spaces to fit the 3-char slot
+            formatted_cells = {k: f" {v} " for k, v in current_cells.items()}
+            board = TEMPLATE.format(**formatted_cells)
+            print(f"{C_BOARD}{board}{C_RESET}\n")
+
+            if p1_text:
+                print(f"{C_TUTORIAL}{p1_text}{C_RESET}\n")
+            if p2_text:
+                print(f"{C_TUTORIAL}{p2_text}{C_RESET}\n")
+
+        # 1. Base Empty Board
+        cells = {ch: " " for ch in "abcdefghijklmnopqrst"}
+        for r in rosettas:
+            cells[r] = f"{C_ROSETTA}✿{C_RESET}"
+
+        p1_msg = t("tuto.path_p1", p1=C_P1, reset=C_RESET + C_TUTORIAL)
+        draw_state(cells, p1_text=p1_msg)
+        time.sleep(0.8)
+
+        # 2. Animate P1 Path (Bottom row -> Middle row -> Exit)
+        p1_keys =   ['r', 'q', 'p', 'o', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 't', 's']
+        p1_arrows = ['←', '←', '←', '↑', '→', '→', '→', '→', '→', '→', '→', '↓', '←', '↓']
+        p1_piece = f"{C_P1}①{C_RESET}"
+
+        for i in range(len(p1_keys)):
+            # Turn the previous square into an arrow
+            if i > 0:
+                cells[p1_keys[i-1]] = f"{C_P1}{p1_arrows[i-1]}{C_RESET}"
+
+            # Put the piece on the current square
+            cells[p1_keys[i]] = p1_piece
+            draw_state(cells, p1_text=p1_msg)
+            time.sleep(0.15)  # Fast, smooth tracking
+
+        # Leave the final arrow behind as the piece "exits" the board
+        cells[p1_keys[-1]] = f"{C_P1}{p1_arrows[-1]}{C_RESET}"
+        draw_state(cells, p1_text=p1_msg)
+        time.sleep(2.0)
+
+        # 3. Clear the board for P2
+        cells = {ch: " " for ch in "abcdefghijklmnopqrst"}
+        for r in rosettas:
+            cells[r] = f"{C_ROSETTA}✿{C_RESET}"
+
+        p2_msg = t("tuto.path_p2", p2=C_P2, p2_name=self.p2.name, reset=C_RESET + C_TUTORIAL)
+        draw_state(cells, p1_text=p1_msg, p2_text=p2_msg)
+        time.sleep(0.8)
+
+        # 4. Animate P2 Path (Top row -> Middle row -> Exit)
+        p2_keys =   ['d', 'c', 'b', 'a', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'f', 'e']
+        p2_arrows = ['←', '←', '←', '↓', '→', '→', '→', '→', '→', '→', '→', '↑', '←', '↑']
+        p2_piece = f"{C_P2}●{C_RESET}"
+
+        for i in range(len(p2_keys)):
+            if i > 0:
+                cells[p2_keys[i-1]] = f"{C_P2}{p2_arrows[i-1]}{C_RESET}"
+
+            cells[p2_keys[i]] = p2_piece
+            draw_state(cells, p1_text=p1_msg, p2_text=p2_msg)
+            time.sleep(0.15)
+
+        # Leave the final arrow behind
+        cells[p2_keys[-1]] = f"{C_P2}{p2_arrows[-1]}{C_RESET}"
+        draw_state(cells, p1_text=p1_msg, p2_text=p2_msg)
+
+        self._pause()
+
     def _show_dice_explainer(self):
         """Teaches the dice mechanic by demoing all five possible outcomes, then continues."""
         self.navigation.clear()
@@ -163,10 +239,10 @@ class TutorialMatch(Match):
         if start_step == 1:
             self._narrate(
                 "tuto.intro",
-                p1=C_P1, p2=C_P2, p2_name=self.p2.name,
                 bold=C_BOLD_TEXT, reset=C_RESET + C_TUTORIAL,
             )
             self._pause()
+            self._show_path_explainer()
 
         for step_data in TUTORIAL_STEPS[start_step - 1:]:
             # 1. Scene intro narration (before board teleport)

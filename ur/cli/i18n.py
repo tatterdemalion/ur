@@ -373,10 +373,25 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # ── Interactive Tutorial ──────────────────────────────────────────────
     "tuto.intro": {
-        "en": "Welcome to {bold}THE ROYAL GAME OF UR!{reset}\n\nOne of the oldest board games ever discovered.\n\nYou will play with numbered pieces in cyan from ({p1}①{reset} to {p1}⑦{reset}).\n\nYour opponent is {p2_name}, she has small red ({p2}●{reset}) dots.\n\n{bold}The goal:{reset} move all 7 of your pieces off the board before your opponent.",
-        "tr": "{bold}UR'UN KRALIYET OYUNU{reset}'na hoş geldin!\n\nKeşfedilen en eski masa oyunlarından biri.\n\nSen ({p1}①{reset} ile {p1}⑦{reset} arasında) numaralı mavi taşlarla oynayacaksın.\n\nRakibin {p2_name}, onun taşları ise küçük kırmızı ({p2}●{reset}) daireler.\n\n{bold}Amaç:{reset} 7 taşını rakibinden önce tahtadan çıkar.",
+        "en": "Welcome to {bold}THE ROYAL GAME OF UR!{reset}\n\nOne of the oldest board games ever discovered.\n\n{bold}The goal:{reset} move all 7 of your pieces off the board before your opponent.",
+        "tr": "{bold}UR'UN KRALIYET OYUNU{reset}'na hoş geldin!\n\nKeşfedilen en eski masa oyunlarından biri.\n\n{bold}Amaç:{reset} 7 taşını rakibinden önce tahtadan çıkar.",
+    },
+    "tuto.board_title": {
+        "en": "THE BOARD",
+        "tr": "TAHTA",
+    },
+    "tuto.path_p1": {
+        "en": "You will play with numbered pieces in cyan from ({p1}①{reset} to {p1}⑦{reset}).",
+        "tr": "Sen ({p1}①{reset} ile {p1}⑦{reset} arasında) numaralı mavi taşlarla oynayacaksın.",
+    },
+    "tuto.path_p2": {
+        "en": "Your opponent is {p2_name}, she has small red ({p2}●{reset}) dots.",
+        "tr": "Rakibin {p2_name}, onun taşları ise küçük kırmızı ({p2}●{reset}) daireler.",
     },
     "tuto.dice_explainer": {
+        "en": "Each turn you flip 4 coins — heads or tails — giving a result between 0 and 4.\n\nEvery outcome is possible — let's see all of them.",
+        "tr": "Her turda 4 para atarsın — yazı veya tura — sonuç 0 ile 4 arasında olur.\n\nHer sonuç mümkün — hepsine bakalım.",
+    },    "tuto.dice_explainer": {
         "en": "Each turn you flip 4 coins — heads or tails — giving a result between 0 and 4.\n\nEvery outcome is possible — let's see all of them.",
         "tr": "Her turda 4 para atarsın — yazı veya tura — sonuç 0 ile 4 arasında olur.\n\nHer sonuç mümkün — hepsine bakalım.",
     },
