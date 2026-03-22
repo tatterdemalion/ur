@@ -43,8 +43,8 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # ── Navigation ───────────────────────────────────────────────────────
     "nav.commands_hint": {
-        "en": "  (Type 'menu' to return to main menu, 'quit' to quit)",
-        "tr": "  (Ana menüye dönmek için 'menu', çıkmak için 'quit' yaz)",
+        "en": "  (Use arrow keys to select, Enter to confirm, 'Q' to go back)",
+        "tr": "  (Seçmek için yön tuşlarını, onaylamak için Enter'ı, dönmek için 'Q'yu kullanın)",
     },
     "nav.ingame_commands_hint": {
         "en": "  (Type 'menu' to return to main menu, 'quit' to quit, 'help' for board labels and move hints)",
@@ -53,14 +53,6 @@ _STRINGS: dict[str, dict[str, str]] = {
     "nav.ingame_help_open_hint": {
         "en": "  (Type 'back' to hide labels, 'menu' to return to main menu, 'quit' to quit)",
         "tr": "  (Etiketleri gizlemek için 'back', 'menu' ana menü, 'quit' çıkış)",
-    },
-    "nav.select_option": {
-        "en": "Select an option: ",
-        "tr": "Bir seçenek seçin: ",
-    },
-    "nav.press_enter_menu": {
-        "en": "\nPress Enter to return to the main menu: ",
-        "tr": "\nAna menüye dönmek için Enter'a bas: ",
     },
     # ── Main menu ────────────────────────────────────────────────────────
     "menu.title": {
@@ -95,55 +87,22 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Back",
         "tr": "Geri",
     },
-    # ── Tutorial ─────────────────────────────────────────────────────────
-    "tutorial.title": {
-        "en": "HOW TO PLAY THE ROYAL GAME OF UR",
-        "tr": "UR'UN KRALIYET OYUNU NASIL OYNANIR",
-    },
-    "tutorial.line1": {
-        "en": "1. Objective: Move all 7 of your pieces across the board to the end before your opponent.",
-        "tr": "1. Amaç: 7 taşının tamamını rakibinden önce tahtanın sonuna taşı.",
-    },
-    "tutorial.line2": {
-        "en": "2. Movement: You roll 4 binary dice each turn, yielding a move of 0 to 4 spaces.",
-        "tr": "2. Hareket: Her turda 4 ikili zar atarsın; 0 ile 4 kare arasında hareket edersin.",
-    },
-    "tutorial.line3": {
-        "en": "3. Stacking: You cannot land on a square occupied by your own piece.",
-        "tr": "3. Üst üste binme: Kendi taşının bulunduğu kareye inemezsin.",
-    },
-    "tutorial.line4": {
-        "en": "4. Combat: Landing on an opponent's piece in the shared middle row 'captures' it,",
-        "tr": "4. Savaş: Ortak orta sırada rakip taşın üzerine inersen onu 'ele geçirirsin',",
-    },
-    "tutorial.line4b": {
-        "en": "   sending it back off-board to start over.",
-        "tr": "   o taş başa döner.",
-    },
-    "tutorial.line5": {
-        "en": "5. Rosettas: Landing on a Rosetta ({rosetta}) grants an extra turn immediately.",
-        "tr": "5. Rozetler: Rozet ({rosetta}) üzerine inmek (Rozetlenmek) anında ekstra tur kazandırır.",
-    },
-    "tutorial.line5b": {
-        "en": "   Additionally, the central Rosetta is a safe haven where your piece cannot be captured.",
-        "tr": "   Ayrıca merkezdeki rozet güvenli bir limandır; oradaki taşın ele geçirilemez.",
-    },
     # ── Bot selection ─────────────────────────────────────────────────────
     "bot.select_title": {
         "en": "SELECT OPPONENT",
         "tr": "RAKİP SEÇ",
     },
     "bot.random": {
-        "en": "RandomBot                                     Easy",
-        "tr": "RandomBot                                    Kolay",
+        "en": "RandomBot                                       Easy",
+        "tr": "RandomBot                                      Kolay",
     },
     "bot.greedy": {
-        "en": "GreedyBot                                   Medium",
-        "tr": "GreedyBot                                     Orta",
+        "en": "GreedyBot                                     Medium",
+        "tr": "GreedyBot                                       Orta",
     },
     "bot.strategic": {
-        "en": "StrategicBot                                  Hard",
-        "tr": "StrategicBot                                   Zor",
+        "en": "StrategicBot                                    Hard",
+        "tr": "StrategicBot                                     Zor",
     },
     # ── Continue game ─────────────────────────────────────────────────────
     "continue.title": {
@@ -171,18 +130,6 @@ _STRINGS: dict[str, dict[str, str]] = {
     "host.title": {
         "en": "HOST GAME",
         "tr": "OYUN KUR",
-    },
-    "host.saved_lan_games": {
-        "en": "Saved LAN games:",
-        "tr": "Kaydedilmiş LAN oyunları:",
-    },
-    "host.enter_game_name": {
-        "en": "Enter a game name (or press Enter to start fresh): ",
-        "tr": "Oyun adı girin (yeni oyun için Enter'a basın): ",
-    },
-    "host.no_save_found": {
-        "en": "No save found for '{name}'. Starting a new game.",
-        "tr": "'{name}' için kayıt bulunamadı. Yeni oyun başlatılıyor.",
     },
     "host.game_name_label": {
         "en": "Game name: ",
@@ -225,9 +172,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Waiting for opponent to move...",
         "tr": "Rakibin hamlesi bekleniyor...",
     },
-    "match.opponent_disconnected": {
-        "en": "\nOpponent disconnected.",
-        "tr": "\nRakip bağlantıyı kesti.",
+    "match.disconnected": {
+        "en": "\nDisconnected.",
+        "tr": "\nBağlantı koptu.",
     },
     "match.press_enter_menu": {
         "en": "\nPress Enter to return to the main menu: ",
@@ -396,9 +343,6 @@ _STRINGS: dict[str, dict[str, str]] = {
     "tuto.dice_explainer": {
         "en": "Each turn you flip 4 coins — heads or tails — giving a result between 0 and 4.\n\nEvery outcome is possible — let's see all of them.",
         "tr": "Her turda 4 para atarsın — yazı veya tura — sonuç 0 ile 4 arasında olur.\n\nHer sonuç mümkün — hepsine bakalım.",
-    },    "tuto.dice_explainer": {
-        "en": "Each turn you flip 4 coins — heads or tails — giving a result between 0 and 4.\n\nEvery outcome is possible — let's see all of them.",
-        "tr": "Her turda 4 para atarsın — yazı veya tura — sonuç 0 ile 4 arasında olur.\n\nHer sonuç mümkün — hepsine bakalım.",
     },
     "tuto.dice_demo_result": {
         "en": "→  {roll}",
@@ -479,10 +423,6 @@ _STRINGS: dict[str, dict[str, str]] = {
     "tuto.press_enter": {
         "en": "Press {bold}Enter{reset} to continue...",
         "tr": "Devam etmek için {bold}Enter{reset}'a bas...",
-    },
-    "tuto.title": {
-        "en": "HOW TO PLAY",
-        "tr": "NASIL OYNANIR",
     },
     # ── Language menu ─────────────────────────────────────────────────────
     "lang.title": {

@@ -58,7 +58,7 @@ class Match:
             self.save_path = save_game(self.engine, mode, self.game_name, self.save_path)
 
     def handle_disconnect(self):
-        self.show_message(f"{t('match.opponent_disconnected')}{C_RESET}", 2.0)
+        self.show_message(f"{t('match.disconnected')}{C_RESET}", 2.0)
 
     def end_game(self, is_victory: bool):
         """Cleans up the save file, displays the victory/defeat art, then prompts to return to menu."""
@@ -218,7 +218,7 @@ class HostMatch(Match):
             )
             protocol.run()
 
-        except (ConnectionError, OSError):
+        except (ConnectionError, OSError, KeyboardInterrupt):
             self.handle_disconnect()
 
         finally:

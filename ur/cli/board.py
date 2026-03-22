@@ -10,7 +10,7 @@ from ur.cli.constants import (
     C_P2,
     C_RESET,
     C_ROSETTA,
-    C_TEXT,
+    C_ITALIC,
     MISSING_CELLS,
     NUM_CIRCLES,
     TEMPLATE,
@@ -65,11 +65,11 @@ class Board:
 
         # 1. Centered Title
         title_text = f"=== {t('board.title')} ==="
-        if self.game_name:
-            title_text += f"   {self.game_name}"
-
         title_pad = max(0, (cols - len(title_text)) // 2)
-        print(" " * title_pad + f"{C_BOLD_TEXT}{title_text}{C_RESET}\n")
+        print(" " * title_pad + f"{C_BOLD_TEXT}{title_text}{C_RESET}")
+        if self.game_name:
+            game_name_pad = max(0, (cols - len(self.game_name)) // 2)
+            print(" " * game_name_pad + f"{C_ITALIC}{self.game_name}{C_RESET}\n")
 
         # Base margin to center the board itself
         board_margin = " " * max(0, (cols - board_width) // 2)
