@@ -133,16 +133,16 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tr": "RAKİP SEÇ",
     },
     "bot.random": {
-        "en": "RandomBot    (Easy - Moves completely randomly)",
-        "tr": "RandomBot    (Kolay - Tamamen rastgele hareket eder)",
+        "en": "RandomBot                                         Easy",
+        "tr": "RandomBot                                        Kolay",
     },
     "bot.greedy": {
-        "en": "GreedyBot    (Medium - Always takes points or hits immediately)",
-        "tr": "GreedyBot    (Orta - Her zaman anında puan alır veya vurur)",
+        "en": "GreedyBot                                       Medium",
+        "tr": "GreedyBot                                         Orta",
     },
     "bot.strategic": {
-        "en": "StrategicBot (Hard - Calculates probabilities of danger)",
-        "tr": "StrategicBot (Zor - Tehlike olasılıklarını hesaplar)",
+        "en": "StrategicBot                                      Hard",
+        "tr": "StrategicBot                                       Zor",
     },
     # ── Continue game ─────────────────────────────────────────────────────
     "continue.title": {
