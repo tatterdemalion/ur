@@ -32,7 +32,6 @@ class Session:
             json.dump(session, f)
 
 
-
 def _pick_local_save_menu() -> Optional[SaveFile]:
     saves = [s for s in list_saves() if s.mode == "local"]
     if not saves:
@@ -43,6 +42,7 @@ def _pick_local_save_menu() -> Optional[SaveFile]:
     menu = Menu(t("continue.title"))
     for s in saves:
         menu.add(str(s), s)
+    menu.add(t("menu.back"), None)
 
     return menu.prompt()
 
@@ -58,6 +58,7 @@ def select_bot_menu() -> Optional[Bot]:
     menu.add(t("bot.random"), RandomBot())
     menu.add(t("bot.greedy"), GreedyBot())
     menu.add(t("bot.strategic"), StrategicBot())
+    menu.add(t("menu.back"), None)
     return menu.prompt()
 
 
@@ -66,6 +67,8 @@ def _language_menu():
     menu = Menu(t("lang.title"))
     for code, key in lang_keys.items():
         menu.add(t(key), code)
+    menu.add(t("menu.back"), None)
+
     choice = menu.prompt()
     if choice:
         set_language(choice)
@@ -83,11 +86,12 @@ def main_menu():
         menu.add(t("menu.join"), "join")
         menu.add(t("menu.tutorial"), "tutorial")
         menu.add(t("menu.language"), "language")
+        menu.add(t("menu.quit"), "quit")
 
         choice = menu.prompt()
 
-        # Handle Q or ESC from the main menu by gracefully exiting
-        if choice is None:
+        # Handle Q, ESC, or explicit "Quit" selection
+        if choice is None or choice == "quit":
             Navigation.clear()
             sys.exit()
 

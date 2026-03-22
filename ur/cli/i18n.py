@@ -86,6 +86,14 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Change Language",
         "tr": "Dili değiştir",
     },
+    "menu.quit": {
+        "en": "Quit to Desktop",
+        "tr": "Çıkış",
+    },
+    "menu.back": {
+        "en": "Back",
+        "tr": "Geri",
+    },
     # ── Tutorial ─────────────────────────────────────────────────────────
     "tutorial.title": {
         "en": "HOW TO PLAY THE ROYAL GAME OF UR",

@@ -115,12 +115,7 @@ class Menu:
                 print(" " * box_pad + f"{C_BOARD}║{C_RESET}{opt_padded}{C_BOARD}║{C_RESET}")
 
         print(" " * box_pad + f"{C_BOARD}╚" + "═" * inner_width + f"╝{C_RESET}")
-
-        # Center the footer hint
-        footer = t("nav.commands_hint")
-        footer_raw = ANSI_ESCAPE.sub('', footer)
-        footer_pad = max(0, (width - len(footer_raw)) // 2)
-        print("\n" + " " * footer_pad + f"{C_BOARD}{footer}{C_RESET}")
+        print("\n") # Just leave a clean empty line instead of the footer text
 
     def prompt(self):
         """Displays the interactive menu and blocks until a selection is made."""
