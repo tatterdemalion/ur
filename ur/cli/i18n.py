@@ -445,12 +445,12 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tr": "{piece} taşı hareket etti. {p1}①{reset} taşı engellendi — merkezi {rosetta}✿ Rozet{reset}'teki bir taşı ele geçiremezsin.",
     },
     "tuto.step7.hint": {
-        "en": "STEP 7 — SCORING\nTo score, a piece must land exactly on the finish with the right roll — no overshooting.\nYou rolled {roll}. Move piece {p1}①{reset} off the board!",
-        "tr": "ADIM 7 — PUAN KAZANMA\nPuan kazanmak için taşın doğru zarla tam olarak bitişe inmesi gerekir — geçemezsin.\n{roll} attın. {p1}①{reset} taşını tahtadan çıkar!",
+        "en": "STEP 7 — SCORING\nTo score, a piece must land exactly on the finish with the right roll. No overshooting.\nYou rolled {roll}. Move piece {p1}①{reset} off the board!",
+        "tr": "ADIM 7 — PUAN KAZANMA\nPuan kazanmak için taşın doğru zarla tam olarak bitişe inmesi gerekir. Daha yüksek bir zarla geçemezsin.\n{roll} attın. {p1}①{reset} taşını tahtadan çıkar!",
     },
     "tuto.step7": {
-        "en": "Piece {piece} scored! The first player to score all 7 pieces wins.",
-        "tr": "{piece} taşı puan yaptı! Tüm 7 taşını ilk bitiren kazanır.",
+        "en": "Piece {piece} scored!",
+        "tr": "{piece} taşı puan yaptı!",
     },
     "tuto.outro": {
         "en": "Well played! That is everything you need to know.\nThe first player to move all 7 pieces off the board wins.",
