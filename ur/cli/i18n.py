@@ -11,6 +11,11 @@ Usage:
 from __future__ import annotations
 
 _STRINGS: dict[str, dict[str, str]] = {
+    "new_game": {
+        "en": "New Game",
+        "tr": "Yeni Oyun",
+    },
+
     # ── Splash screen ────────────────────────────────────────────────────
     "splash.press_enter": {
         "en": "Press Enter to step into the past...",
@@ -62,21 +67,17 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "THE ROYAL GAME OF UR",
         "tr": "UR'UN KRALIYET OYUNU",
     },
-    "menu.play_vs_bot": {
-        "en": "Play vs Bot",
-        "tr": "Bot'a karşı oyna",
+    "menu.single_player": {
+        "en": "Single Player",
+        "tr": "Tek Oyuncu",
     },
-    "menu.continue_vs_bot": {
-        "en": "Continue vs Bot",
-        "tr": "Bot'a karşı devam et",
-    },
-    "menu.host": {
-        "en": "Host Multiplayer Game",
-        "tr": "Çok oyunculu oyun kur",
+    "menu.multi_player": {
+        "en": "Multi Player",
+        "tr": "Çok Oyuncu",
     },
     "menu.join": {
-        "en": "Join Multiplayer Game",
-        "tr": "Çok oyunculu oyuna katıl",
+        "en": "Join Game",
+        "tr": "Oyuna Katıl",
     },
     "menu.tutorial": {
         "en": "How to Play",
@@ -170,10 +171,6 @@ _STRINGS: dict[str, dict[str, str]] = {
     "host.title": {
         "en": "HOST GAME",
         "tr": "OYUN KUR",
-    },
-    "host.new_game": {
-        "en": "New game",
-        "tr": "Yeni oyun",
     },
     "host.saved_lan_games": {
         "en": "Saved LAN games:",

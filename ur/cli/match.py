@@ -79,6 +79,7 @@ class LocalMatch(Match):
         self.bot = bot
         if save:
             self.engine, self.p1, self.p2 = save.restore_engine()
+            self.p2.name = self.bot.name
             self.game_name = save.game_name
             self.save_path = save.path
         else:
@@ -132,34 +133,14 @@ class HostMatch(Match):
         self.server = Server()
         self.save = None
 
-    def _setup_game(self):
-        lan_saves = [s for s in list_saves() if s.mode == "lan"]
-
-        _NEW_GAME = object()
-        menu = Menu(t("host.title"))
-        menu.add(t("host.new_game"), _NEW_GAME)
-        for s in lan_saves:
-            menu.add(f"{C_P1}{s.game_name}{C_RESET}  — saved {s.saved_at[:16]}", s)
-
-        menu.add(t("menu.back"), None)
-
-        choice = menu.prompt()
-        if choice is None:
-            return False
-
-        if choice is _NEW_GAME:
-            self.game_name = generate_game_name()
-            print(f"{t('host.game_name_label')}{C_P1}{self.game_name}{C_RESET}")
-        else:
-            self.save = choice
-            self.game_name = self.save.game_name
-            print(f"{C_P1}{t('match.save_found')}{self.save}{C_RESET}")
-
-        return True
+    def load_game(self, save: SaveFile):
+        self.save = save
+        self.game_name = self.save.game_name
+        self.start()
 
     def start(self):
-        if not self._setup_game():
-            return
+        if not self.save:
+            self.game_name = generate_game_name()
 
         self.server.start()
 
