@@ -2,10 +2,19 @@ import random
 import sys
 import time
 import os
+import re
 
-from ur.cli.constants import C_BOARD, C_P1, C_P2, C_RESET, C_ROSETTA, C_TEXT, LOGO
+from ur.cli.constants import (
+    ANSI_ESCAPE,
+    C_BOARD,
+    C_P1,
+    C_P2,
+    C_RESET,
+    C_ROSETTA,
+    C_TEXT, LOGO,
+)
 from ur.cli.i18n import t
-from ur.cli.widgets import get_keystroke, ANSI_ESCAPE
+from ur.cli.widgets import get_keystroke
 
 _TASK_KEYS = [
     "splash.task.0",
@@ -25,22 +34,24 @@ def animate_loading():
 
     logo_width = max(len(ANSI_ESCAPE.sub('', line)) for line in LOGO)
 
-    total_lines = len(LOGO) + 4
+    total_lines = len(LOGO) + 5  # Adjusted for 3 lines of animation
     top_pad = max(0, (lines - total_lines) // 2)
     print("\n" * top_pad, end="")
 
     for line in LOGO:
         print(" " * max(0, (cols - logo_width) // 2) + line)
 
-    print("\n\n")
+    # 3 blank lines so we have space to overwrite our 3-line animation
+    print("\n\n\n")
 
     bar_length = 40
-    # Calculate left padding for the progress bar
     bar_pad = max(0, (cols - bar_length - 2) // 2)
 
     for i in range(bar_length + 1):
-        sys.stdout.write("\033[2A\r\033[J")
+        # ANSI Magic: Move cursor up 3 lines (\033[3A), return to start (\r), clear to bottom (\033[J)
+        sys.stdout.write("\033[3A\r\033[J")
 
+        # --- 1. THE CINEMATIC CHASE ANIMATION ---
         track = [" "] * bar_length
         p1_pos = i
 
@@ -65,19 +76,25 @@ def animate_loading():
             track[-1] = f"{C_P2}●{C_RESET}"
             track[-1] = f"{C_ROSETTA}①{C_RESET}"
 
+        # Line 1: Track
         print(" " * bar_pad + "".join(track))
 
+        # --- 2. THE PROGRESS BAR ---
         percent = i / bar_length
         filled = f"{C_ROSETTA}" + "𒀭" * i
         empty = f"{C_BOARD}" + "─" * (bar_length - i)
         bar = f"[{filled}{empty}{C_RESET}]"
 
-        task_idx = min(int(percent * len(_TASK_KEYS)), len(_TASK_KEYS) - 1)
-        task = t(_TASK_KEYS[task_idx])
+        # Line 2: Bar
+        print(" " * bar_pad + bar)
 
-        # Centered task line
-        task_line = f"{bar} {int(percent * 100)}% {C_TEXT}{task:<30}{C_RESET}"
-        print(" " * bar_pad + task_line)
+        # --- 3. THE TEXT ---
+        task_idx = min(int(percent * len(_TASK_KEYS)), len(_TASK_KEYS) - 1)
+        task_str = f"{int(percent * 100)}% {t(_TASK_KEYS[task_idx])}"
+
+        # Line 3: Text (Centered dynamically to the terminal width)
+        task_pad = max(0, (cols - len(task_str)) // 2)
+        print(" " * task_pad + f"{C_TEXT}{task_str}{C_RESET}")
 
         time.sleep(random.uniform(0.02, 0.06))
 

@@ -6,11 +6,15 @@ import tty
 import select
 from typing import Optional
 
-from ur.cli.constants import C_BOARD, C_BOLD_TEXT, C_RESET, C_HOVER, LOGO
+from ur.cli.constants import (
+    ANSI_ESCAPE,
+    C_BOARD,
+    C_BOLD_TEXT,
+    C_RESET,
+    C_HOVER,
+    LOGO,
+)
 from ur.cli.i18n import t
-
-# Regex to strip ANSI colors so we can calculate string length for centering
-ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
 def get_keystroke() -> str:

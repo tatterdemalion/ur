@@ -1,3 +1,5 @@
+import re
+
 # --- ANSI COLOR CODES ---
 C_RESET = "\033[0m"  # Resets terminal color back to default
 C_BOARD = "\033[90m"  # Dark Gray for drawing the grid lines of the board
@@ -10,6 +12,8 @@ C_BOLD_TEXT = "\033[1;97m"  # 1 for Bold, 97 for Bright White
 C_TEXT = "\033[97m"  # Bright White for headers, menus, and general UI text
 C_TUTORIAL = "\033[95m"  # Bright Magenta for tutorial narration
 C_HOVER = "\033[46m\033[30m"  # Cyan background, Black text for Hover State
+
+ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 NUM_CIRCLES = {1: "①", 2: "②", 3: "③", 4: "④", 5: "⑤", 6: "⑥", 7: "⑦"}
 BOARD_ROWS = 3
