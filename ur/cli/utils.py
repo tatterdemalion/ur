@@ -11,6 +11,7 @@ from ur.rules import FINISH, ROSETTAS
 
 if TYPE_CHECKING:
     from ur.cli.widgets import Navigation
+    from ur.cli.board import Board
 
 
 class GameUtils:
@@ -35,6 +36,14 @@ class GameUtils:
         time.sleep(0.5)
         sys.stdout.write(f"\r[{player_color}{final_str}{C_RESET}]" + " " * 12 + "\n\n")
         sys.stdout.flush()
+
+    @staticmethod
+    def print_static_dice(turn_text: str, player_color: str, roll: int):
+        """Instantly prints the dice state for redrawing the screen."""
+        print(turn_text)
+        final_faces = ["●"] * roll + ["○"] * (4 - roll)
+        final_str = " ".join(final_faces)
+        print(f"[{player_color}{final_str}{C_RESET}]\n")
 
     @staticmethod
     def build_move_hints(move: Move, p2: Player, bot_name: str) -> str:
@@ -87,7 +96,19 @@ class GameUtils:
             print(f"  {piece_symbols} : {status} -> {target_str}{hint}")
 
     @classmethod
-    def get_human_move(cls, valid_moves: list[Move], p2: Player, bot_name: str, navigation: "Navigation") -> Optional[Move]:
+    def get_human_move(
+        cls,
+        valid_moves: list[Move],
+        ui: "Board",
+        roll: int,
+        turn_text: str,
+        player_color: str
+    ) -> Optional[Move]:
+
+        p2 = ui._top
+        bot_name = p2.name
+        navigation = ui.navigation
+
         valid_moves.sort(key=lambda m: m.piece.progress, reverse=True)
         groups = cls._build_move_groups(valid_moves, p2, bot_name)
 
@@ -103,17 +124,26 @@ class GameUtils:
         navigation.print_commands(f"{C_BOARD}{t('nav.ingame_commands_hint')}{C_RESET}")
 
         help_open = False
+        error_msg = ""
         while True:
+            if error_msg:
+                print(f"{C_P2}{error_msg}{C_RESET}")
+                error_msg = ""
+
             raw_input = input(prompt).strip()
 
             if raw_input.lower() == "help":
                 help_open = True
+                ui.draw(show_labels=True)
+                cls.print_static_dice(turn_text, player_color, roll)
                 cls._print_move_options(groups)
                 navigation.print_commands(f"{C_BOARD}{t('nav.ingame_help_open_hint')}{C_RESET}")
                 continue
 
             if raw_input.lower() == "back" and help_open:
                 help_open = False
+                ui.draw(show_labels=False)
+                cls.print_static_dice(turn_text, player_color, roll)
                 navigation.print_commands(f"{C_BOARD}{t('nav.ingame_commands_hint')}{C_RESET}")
                 continue
 
@@ -129,9 +159,9 @@ class GameUtils:
                 chosen = next((m for m in valid_moves if m.piece.identifier == choice), None)
                 if chosen:
                     return chosen
-                print(t("move.invalid_choice"))
+                error_msg = t("move.invalid_choice")
             except ValueError:
-                print(t("move.invalid_number"))
+                error_msg = t("move.invalid_number")
 
     @staticmethod
     def format_action(action: Action, local_player_idx: int, opponent_name: str) -> str:

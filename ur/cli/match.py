@@ -112,7 +112,7 @@ class LocalMatch(Match):
                 continue
 
             if self.engine.current_player == self.p1:
-                chosen_move = GameUtils.get_human_move(valid_moves, self.p2, self.bot.name, self.navigation)
+                chosen_move = GameUtils.get_human_move(valid_moves, self.ui, roll, turn_text, player_color)
                 if chosen_move is None:
                     return  # Abort to menu
             else:
@@ -200,8 +200,9 @@ class HostMatch(Match):
 
             def on_my_turn(valid_moves: list, roll: int):
                 self.update_display()
-                GameUtils.animate_dice(t("match.your_turn"), C_P1, roll)
-                return GameUtils.get_human_move(valid_moves, self.p2, t("player.opponent"), self.navigation)
+                turn_text = t("match.your_turn")
+                GameUtils.animate_dice(turn_text, C_P1, roll)
+                return GameUtils.get_human_move(valid_moves, self.ui, roll, turn_text, C_P1)
 
             def on_state(last_action):
                 self.save_state("lan")
@@ -301,8 +302,9 @@ class ClientMatch(Match):
                 valid_moves = self.engine.get_valid_moves(roll)
                 valid_moves = [m for m in valid_moves if m.piece.identifier in set(valid_move_ids)]
                 self.update_display()
-                GameUtils.animate_dice(t("match.your_turn"), C_P1, roll)
-                chosen_move = GameUtils.get_human_move(valid_moves, self.p1, t("player.opponent"), self.navigation)
+                turn_text = t("match.your_turn")
+                GameUtils.animate_dice(turn_text, C_P1, roll)
+                chosen_move = GameUtils.get_human_move(valid_moves, self.ui, roll, turn_text, C_P1)
                 if chosen_move is None:
                     return None
                 return chosen_move.piece.identifier

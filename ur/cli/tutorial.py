@@ -237,7 +237,7 @@ class TutorialMatch(Match):
                 else:
                     chosen_move = GameUtils.get_human_move(
                         restricted_moves if restricted_moves else valid_moves,
-                        self.p2, self.p2.name, self.navigation,
+                        self.ui, roll, turn_text, player_color
                     )
                     if chosen_move is None:
                         return
