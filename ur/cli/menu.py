@@ -1,14 +1,16 @@
 import json
 import os
+import sys
 import time
 from typing import Optional
 
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
-from ur.cli.constants import C_BOLD_TEXT, C_RESET
+from ur.cli.constants import C_BOLD_TEXT, C_RESET, SCREEN_WIDTH
 from ur.cli.i18n import set_language, t
 from ur.cli.match import ClientMatch, HostMatch, LocalMatch
 from ur.cli.tutorial import TutorialMatch
 from ur.cli.widgets import Menu, Navigation
+from ur.cli.utils import GameUtils
 from ur.saves import SaveFile, list_saves
 
 
@@ -31,19 +33,37 @@ class Session:
             json.dump(session, f)
 
 
+def _game_selection_menu(title: str, saves: list, extra_items: Optional[list] = None) -> Optional[SaveFile]:
+    if not extra_items:
+        extra_items = []
 
-def _pick_local_save_menu() -> Optional[SaveFile]:
-    saves = [s for s in list_saves() if s.mode == "local"]
-    if not saves:
-        print(t("continue.no_saves"))
-        time.sleep(1.5)
-        return None
+    menu = Menu(title)
+    menu.add(t("new_game"), "new_game")
+    for title, choice in extra_items:
+        menu.add(title, choice)
 
-    menu = Menu(t("continue.title"))
-    for s in saves:
-        menu.add(str(s), s)
+    for save in saves:
+        time_ago = GameUtils.time_ago(save.saved_at)
+        space = " " * (SCREEN_WIDTH - len(save.game_name) - len(time_ago))
+        text = f"{save.game_name}{space}{time_ago}"
+        menu.add(text, save)
 
+    menu.add(t("menu.back"), None)
     return menu.prompt()
+
+
+def local_game_menu() -> Optional[SaveFile]:
+    saves = [s for s in list_saves() if s.mode == "local"]
+    return _game_selection_menu(title=t("menu.single_player"), saves=saves)
+
+
+def multiplayer_game_menu() -> Optional[SaveFile]:
+    saves = [s for s in list_saves() if s.mode == "lan"]
+    return _game_selection_menu(
+        title=t("menu.multi_player"),
+        saves=saves,
+        extra_items=[(t("menu.join"), "join_game")]
+    )
 
 
 def _bot_by_name(name: str) -> Optional[Bot]:
@@ -57,6 +77,7 @@ def select_bot_menu() -> Optional[Bot]:
     menu.add(t("bot.random"), RandomBot())
     menu.add(t("bot.greedy"), GreedyBot())
     menu.add(t("bot.strategic"), StrategicBot())
+    menu.add(t("menu.back"), None)
     return menu.prompt()
 
 
@@ -65,6 +86,8 @@ def _language_menu():
     menu = Menu(t("lang.title"))
     for code, key in lang_keys.items():
         menu.add(t(key), code)
+    menu.add(t("menu.back"), None)
+
     choice = menu.prompt()
     if choice:
         set_language(choice)
@@ -76,44 +99,62 @@ def main_menu():
 
     while True:
         menu = Menu(t("menu.title"))
-        menu.add(t("menu.play_vs_bot"), "play")
-        menu.add(t("menu.continue_vs_bot"), "continue")
-        menu.add(t("menu.host"), "host")
-        menu.add(t("menu.join"), "join")
+        menu.add(t("menu.single_player"), "single_player")
+        menu.add(t("menu.multi_player"), "multi_player")
         menu.add(t("menu.tutorial"), "tutorial")
         menu.add(t("menu.language"), "language")
+        menu.add(t("menu.quit"), "quit")
 
         choice = menu.prompt()
 
-        if choice == "play":
-            bot = select_bot_menu()
-            if bot:
-                LocalMatch(bot, navigation).start()
-        elif choice == "continue":
-            save = _pick_local_save_menu()
-            if save:
-                bot = _bot_by_name(save.p2_name) or select_bot_menu()
-                if bot:
-                    LocalMatch(bot, navigation, save=save).start()
-        elif choice == "host":
-            HostMatch(navigation).start()
-        elif choice == "join":
+        if choice == "quit":
             Navigation.clear()
-            print(f"{C_BOLD_TEXT}=== {t('join.title')} ==={C_RESET}\n")
-            last_ip = Session.load().get("last_ip", "")
-            prompt = (
-                t("join.enter_ip_last", last_ip=last_ip) if last_ip else t("join.enter_ip")
-            )
-            Navigation.print_commands()
-            host_ip = input(prompt).strip()
+            sys.exit()
 
-            if Navigation.check_global_commands(host_ip):
-                continue
+        elif choice == "single_player":
+            choice = local_game_menu()
+            bot = None
+            save = None
 
-            host_ip = host_ip or last_ip
-            if host_ip:
-                Session.save({"last_ip": host_ip})
-                ClientMatch(host_ip, navigation).start()
+            if choice == "new_game":
+                bot = select_bot_menu()
+            elif isinstance(choice, SaveFile):
+                save = choice
+                bot = _bot_by_name(save.p2_name) or select_bot_menu()
+
+            if bot:
+                LocalMatch(bot, navigation, save=save).start()
+            else:
+                main_menu()
+
+        elif choice == "multi_player":
+            match = HostMatch(navigation)
+            choice = multiplayer_game_menu()
+            if choice == "new_game":
+                match.start()
+            elif choice == "join_game":
+                Navigation.clear()
+                print(f"{C_BOLD_TEXT}=== {t('join.title')} ==={C_RESET}\n")
+                last_ip = Session.load().get("last_ip", "")
+                prompt = (
+                    t("join.enter_ip_last", last_ip=last_ip) if last_ip else t("join.enter_ip")
+                )
+                Navigation.print_commands()
+                host_ip = input(prompt).strip()
+
+                if Navigation.check_global_commands(host_ip):
+                    continue
+
+                host_ip = host_ip or last_ip
+                if host_ip:
+                    Session.save({"last_ip": host_ip})
+                    ClientMatch(host_ip, navigation).start()
+            elif isinstance(choice, SaveFile):
+                save = choice
+                match.load_game(save)
+            else:
+                main_menu()
+
         elif choice == "tutorial":
             TutorialMatch(navigation).start()
         elif choice == "language":

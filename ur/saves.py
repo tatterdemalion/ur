@@ -105,8 +105,8 @@ class SaveFile:
     p1_name: str
     p2_name: str
     current_idx: int
-    last_action: object  # str (legacy) or dict
-    p1_pieces: dict  # str(identifier) -> progress
+    last_action: object
+    p1_pieces: dict
     p2_pieces: dict
     started_at: str
     saved_at: str
