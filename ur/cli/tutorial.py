@@ -269,7 +269,6 @@ class TutorialMatch(Match):
         self._pause()
         self.navigation.clear()
 
-
 # ---------------------------------------------------------------------------
 # Step table — defined after TutorialMatch so lambdas can reference it
 # ---------------------------------------------------------------------------
@@ -281,6 +280,7 @@ TUTORIAL_STEPS = [
         active_player_idx=0,
         rigged_roll=2,
         allowed_piece_ids=[1],
+        board_setup=_make_snapshot({}, {}),
         pre_turn_hook=lambda m: m._show_dice_explainer(),
     ),
     TutorialStep(
@@ -290,6 +290,7 @@ TUTORIAL_STEPS = [
         rigged_roll=1,
         allowed_piece_ids=[],
         bot_move_id=1,
+        board_setup=_make_snapshot({1: 2}, {}),
     ),
     TutorialStep(
         step_num=3,
@@ -297,13 +298,15 @@ TUTORIAL_STEPS = [
         active_player_idx=0,
         rigged_roll=2,
         allowed_piece_ids=[1],
+        board_setup=_make_snapshot({1: 2}, {1: 1}),
     ),
     TutorialStep(
         step_num=4,
         narrate_key="tuto.step4",
         active_player_idx=0,
         rigged_roll=3,
-        allowed_piece_ids=[1],
+        allowed_piece_ids=[],
+        board_setup=_make_snapshot({1: 4, 2: 2, }, {1: 1}),
         is_free_choice=True,
     ),
     TutorialStep(
