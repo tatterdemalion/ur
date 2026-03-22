@@ -141,6 +141,8 @@ class HostMatch(Match):
         for s in lan_saves:
             menu.add(f"{C_P1}{s.game_name}{C_RESET}  — saved {s.saved_at[:16]}", s)
 
+        menu.add(t("menu.back"), None)
+
         choice = menu.prompt()
         if choice is None:
             return False

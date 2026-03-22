@@ -90,8 +90,7 @@ def main_menu():
 
         choice = menu.prompt()
 
-        # Handle Q, ESC, or explicit "Quit" selection
-        if choice is None or choice == "quit":
+        if choice == "quit":
             Navigation.clear()
             sys.exit()
 

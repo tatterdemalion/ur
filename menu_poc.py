@@ -92,7 +92,7 @@ def run_menu():
         "Host Multiplayer Game",
         "Join Multiplayer Game",
         "How to Play",
-        "Quit to Desktop"
+        "Quit"
     ]
     selected_idx = 0
 

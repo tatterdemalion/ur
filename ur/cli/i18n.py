@@ -87,7 +87,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tr": "Dili değiştir",
     },
     "menu.quit": {
-        "en": "Quit to Desktop",
+        "en": "Quit",
         "tr": "Çıkış",
     },
     "menu.back": {
