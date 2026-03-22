@@ -1,5 +1,7 @@
 import re
 
+SCREEN_WIDTH: int = 50
+
 # --- ANSI COLOR CODES ---
 C_RESET = "\033[0m"  # Resets terminal color back to default
 C_BOARD = "\033[90m"  # Dark Gray for drawing the grid lines of the board

@@ -5,11 +5,12 @@ import time
 from typing import Optional
 
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
-from ur.cli.constants import C_BOLD_TEXT, C_RESET, C_P1, C_TEXT
+from ur.cli.constants import C_BOLD_TEXT, C_RESET, SCREEN_WIDTH
 from ur.cli.i18n import set_language, t
 from ur.cli.match import ClientMatch, HostMatch, LocalMatch
 from ur.cli.tutorial import TutorialMatch
 from ur.cli.widgets import Menu, Navigation
+from ur.cli.utils import GameUtils
 from ur.saves import SaveFile, list_saves
 
 
@@ -40,8 +41,11 @@ def _pick_local_save_menu() -> Optional[SaveFile]:
         return None
 
     menu = Menu(t("continue.title"))
-    for s in saves:
-        menu.add(str(s), s)
+    for save in saves:
+        time_ago = GameUtils.time_ago(save.saved_at)
+        space = " " * (SCREEN_WIDTH - len(save.game_name) - len(time_ago))
+        text = f"{save.game_name}{space}{time_ago}"
+        menu.add(text, save)
     menu.add(t("menu.back"), None)
 
     return menu.prompt()

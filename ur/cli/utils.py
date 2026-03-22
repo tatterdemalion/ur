@@ -1,3 +1,4 @@
+import datetime
 import random
 import sys
 import time
@@ -223,3 +224,27 @@ class GameUtils:
             "current_roll": roll,
         }
         return bot.choose_move(state, valid_moves, engine.current_player)
+
+    @staticmethod
+    def time_ago(iso_timestamp: str) -> str:
+        """Converts an ISO timestamp string into a relative time string (e.g., '5m ago')."""
+        try:
+            past = datetime.datetime.fromisoformat(iso_timestamp)
+        except ValueError:
+            # Fail safely
+            return "-"
+
+        seconds = int((datetime.datetime.now() - past).total_seconds())
+
+        if seconds < 60:
+            return "just now"
+        elif seconds < 3600:
+            return f"{seconds // 60}m ago"
+        elif seconds < 86400:
+            return f"{seconds // 3600}h ago"
+        elif seconds < 2592000:  # 30 days
+            return f"{seconds // 86400}d ago"
+        elif seconds < 31536000: # 365 days
+            return f"{seconds // 2592000}mo ago"
+        else:
+            return f"{seconds // 31536000}y ago"

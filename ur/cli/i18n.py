@@ -133,16 +133,16 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tr": "RAKİP SEÇ",
     },
     "bot.random": {
-        "en": "RandomBot                                         Easy",
-        "tr": "RandomBot                                        Kolay",
+        "en": "RandomBot                                     Easy",
+        "tr": "RandomBot                                    Kolay",
     },
     "bot.greedy": {
-        "en": "GreedyBot                                       Medium",
-        "tr": "GreedyBot                                         Orta",
+        "en": "GreedyBot                                   Medium",
+        "tr": "GreedyBot                                     Orta",
     },
     "bot.strategic": {
-        "en": "StrategicBot                                      Hard",
-        "tr": "StrategicBot                                       Zor",
+        "en": "StrategicBot                                  Hard",
+        "tr": "StrategicBot                                   Zor",
     },
     # ── Continue game ─────────────────────────────────────────────────────
     "continue.title": {
