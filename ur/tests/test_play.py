@@ -1,10 +1,10 @@
 import unittest
 
-from ur.cli.board import Board
-from ur.cli.menu import Navigation
-from ur.cli.utils import GameUtils
-from ur.game import Action, ActionType, Engine, Move, Player
-from ur.rules import P1_PATH, P2_PATH
+from ur.cli.tui.board import Board
+from ur.cli.tui.widgets import Navigation
+from ur.cli.tui.utils import GameUtils
+from ur.game.engine import Action, ActionType, Engine, Move, Player
+from ur.game.rules import P1_PATH, P2_PATH
 
 
 def make_game():

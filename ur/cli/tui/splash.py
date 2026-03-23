@@ -4,7 +4,7 @@ import time
 import os
 import re
 
-from ur.cli.constants import (
+from ur.cli.tui.constants import (
     ANSI_ESCAPE,
     C_BOARD,
     C_P1,
@@ -13,8 +13,8 @@ from ur.cli.constants import (
     C_ROSETTA,
     C_TEXT, LOGO,
 )
-from ur.cli.i18n import t
-from ur.cli.widgets import get_keystroke
+from ur.cli.tui.i18n import t
+from ur.cli.tui.widgets import get_keystroke
 
 _TASK_KEYS = [
     "splash.task.0",

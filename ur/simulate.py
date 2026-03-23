@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 from ur.ai import bots
 from ur.ai.environment import UrEnvironment
-from ur.cli.board import Board
-from ur.cli.menu import Navigation
+from ur.cli.tui.board import Board
+from ur.cli.tui.widgets import Navigation
 
 
 @dataclass

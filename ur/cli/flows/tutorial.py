@@ -3,13 +3,13 @@ from dataclasses import dataclass
 from typing import Callable, Optional
 
 from ur.ai.bots import Bot
-from ur.cli.board import Board
-from ur.cli.constants import C_BOARD, C_BOLD_TEXT, C_ITALIC, C_P1, C_P2, C_RESET, C_ROSETTA, C_TUTORIAL, TEMPLATE
-from ur.cli.i18n import t
-from ur.cli.match import Match
-from ur.cli.utils import GameUtils
-from ur.game import Action, ActionType, Engine, Move, Player
-from ur.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
+from ur.cli.tui.board import Board
+from ur.cli.tui.constants import C_BOARD, C_BOLD_TEXT, C_ITALIC, C_P1, C_P2, C_RESET, C_ROSETTA, C_TUTORIAL, TEMPLATE
+from ur.cli.tui.i18n import t
+from ur.cli.flows.match import Match
+from ur.cli.tui.utils import GameUtils
+from ur.game.engine import Action, ActionType, Engine, Move, Player
+from ur.game.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
 
 
 def _make_snapshot(p1_pieces: dict[int, int], p2_pieces: dict[int, int]) -> dict:

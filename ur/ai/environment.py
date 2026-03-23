@@ -1,5 +1,5 @@
-from ur.game import Engine, Player
-from ur.rules import P1_PATH, P2_PATH
+from ur.game.engine import Engine, Player
+from ur.game.rules import P1_PATH, P2_PATH
 
 
 class UrEnvironment:

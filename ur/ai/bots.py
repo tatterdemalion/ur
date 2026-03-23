@@ -1,7 +1,7 @@
 import random
 
-from ur.game import Move, Player
-from ur.rules import FINISH, ROSETTAS
+from ur.game.engine import Move, Player
+from ur.game.rules import FINISH, ROSETTAS
 
 
 class Bot:

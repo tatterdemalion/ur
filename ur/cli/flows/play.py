@@ -1,10 +1,11 @@
 import os
 
-from ur.cli.i18n import set_language
-from ur.cli.menu import Session, main_menu
-from ur.cli.splash import animate_loading
-from ur.cli.tutorial import TutorialMatch
-from ur.cli.widgets import Navigation
+from ur.cli.tui.i18n import set_language
+from ur.cli.flows.menu import main_menu
+from ur.cli.tui.splash import animate_loading
+from ur.cli.flows.tutorial import TutorialMatch
+from ur.cli.tui.widgets import Navigation
+from ur.storage.session import Session
 
 
 def run():

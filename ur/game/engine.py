@@ -2,7 +2,7 @@ import random
 from dataclasses import dataclass
 from typing import Optional
 
-from ur.rules import FINISH, ROSETTAS
+from ur.game.rules import FINISH, ROSETTAS
 
 
 class ActionType:

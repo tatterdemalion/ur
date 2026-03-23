@@ -2,10 +2,10 @@ import threading
 import time
 import unittest
 
-from ur.game import Engine, Player
+from ur.game.engine import Engine, Player
 from ur.lan.network import Client, Connection, Server
 from ur.lan.protocol import ClientProtocol, HostProtocol
-from ur.rules import FINISH, P1_PATH, P2_PATH
+from ur.game.rules import FINISH, P1_PATH, P2_PATH
 
 
 def get_free_port():

@@ -1,8 +1,8 @@
 import dataclasses
 import unittest
 
-from ur.game import Action, ActionType, Engine, Move, Player
-from ur.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
+from ur.game.engine import Action, ActionType, Engine, Move, Player
+from ur.game.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
 
 
 def make_game():

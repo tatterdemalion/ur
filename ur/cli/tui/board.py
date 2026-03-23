@@ -1,7 +1,7 @@
 import os
 from typing import Optional
 
-from ur.cli.constants import (
+from ur.cli.tui.constants import (
     BOARD_COLUMNS,
     BOARD_ROWS,
     C_BOARD,
@@ -15,9 +15,9 @@ from ur.cli.constants import (
     NUM_CIRCLES,
     TEMPLATE,
 )
-from ur.cli.i18n import t
-from ur.game import Engine, Piece, Player
-from ur.rules import FINISH, ROSETTAS
+from ur.cli.tui.i18n import t
+from ur.game.engine import Engine, Piece, Player
+from ur.game.rules import FINISH, ROSETTAS
 
 
 class Board:

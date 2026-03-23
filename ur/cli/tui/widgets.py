@@ -6,7 +6,7 @@ import tty
 import select
 from typing import Optional
 
-from ur.cli.constants import (
+from ur.cli.tui.constants import (
     ANSI_ESCAPE,
     C_BOARD,
     C_BOLD_TEXT,
@@ -14,7 +14,7 @@ from ur.cli.constants import (
     C_HOVER,
     LOGO,
 )
-from ur.cli.i18n import t
+from ur.cli.tui.i18n import t
 
 
 def get_keystroke() -> str:

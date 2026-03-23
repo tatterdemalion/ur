@@ -5,8 +5,8 @@ import random
 from dataclasses import asdict, dataclass
 from typing import Optional
 
-from ur.game import Action, ActionType, Engine, Player
-from ur.rules import P1_PATH, P2_PATH
+from ur.game.engine import Action, ActionType, Engine, Player
+from ur.game.rules import P1_PATH, P2_PATH
 
 SAVES_DIR = os.path.join(os.path.dirname(__file__), "..", "saves")
 

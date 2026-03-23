@@ -5,13 +5,13 @@ import time
 from typing import TYPE_CHECKING, Optional, Callable
 
 from ur.ai.bots import Bot, RandomBot, GreedyBot, StrategicBot
-from ur.cli.constants import C_BOARD, C_ITALIC, C_P1, C_P2, C_RESET, C_ROSETTA, C_SCORE, NUM_CIRCLES
-from ur.cli.i18n import t
-from ur.game import Action, ActionType, Engine, Move, Player
-from ur.rules import FINISH, ROSETTAS
+from ur.cli.tui.constants import C_BOARD, C_ITALIC, C_P1, C_P2, C_RESET, C_ROSETTA, C_SCORE, NUM_CIRCLES
+from ur.cli.tui.i18n import t
+from ur.game.engine import Action, ActionType, Engine, Move, Player
+from ur.game.rules import FINISH, ROSETTAS
 
 if TYPE_CHECKING:
-    from ur.cli.board import Board
+    from ur.cli.tui.board import Board
 
 
 class GameUtils:

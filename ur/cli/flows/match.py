@@ -3,18 +3,18 @@ import time
 from typing import Optional
 
 from ur.ai.bots import Bot
-from ur.cli.board import Board
-from ur.cli.constants import C_BOLD_TEXT, C_P1, C_P2, C_RESET, C_TEXT, DEFEAT_ART, VICTORY_ART
-from ur.cli.i18n import t
-from ur.cli.widgets import Menu
+from ur.cli.tui.board import Board
+from ur.cli.tui.constants import C_BOLD_TEXT, C_P1, C_P2, C_RESET, C_TEXT, DEFEAT_ART, VICTORY_ART
+from ur.cli.tui.i18n import t
+from ur.cli.tui.widgets import Menu
 from ur.lan.protocol import ClientProtocol, HostProtocol
-from ur.cli.utils import GameUtils
+from ur.cli.tui.utils import GameUtils
 from dataclasses import asdict
 
-from ur.game import Action, Engine, Move, Player
+from ur.game.engine import Action, Engine, Move, Player
 from ur.lan.network import PORT, Client, Server
-from ur.rules import P1_PATH, P2_PATH
-from ur.saves import (
+from ur.game.rules import P1_PATH, P2_PATH
+from ur.storage.saves import (
     SaveFile,
     delete_save,
     generate_game_name,

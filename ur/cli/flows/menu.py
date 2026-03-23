@@ -2,14 +2,14 @@ import sys
 from typing import Optional
 
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
-from ur.cli.constants import C_BOLD_TEXT, C_RESET, SCREEN_WIDTH
-from ur.cli.i18n import set_language, t
-from ur.cli.match import ClientMatch, HostMatch, LocalMatch
-from ur.cli.tutorial import TutorialMatch
-from ur.cli.widgets import Menu, Navigation
-from ur.cli.utils import GameUtils
-from ur.cli.session import Session
-from ur.saves import SaveFile, list_saves
+from ur.cli.tui.constants import C_BOLD_TEXT, C_RESET, SCREEN_WIDTH
+from ur.cli.tui.i18n import set_language, t
+from ur.cli.flows.match import ClientMatch, HostMatch, LocalMatch
+from ur.cli.flows.tutorial import TutorialMatch
+from ur.cli.tui.widgets import Menu, Navigation
+from ur.cli.tui.utils import GameUtils
+from ur.storage.session import Session
+from ur.storage.saves import SaveFile, list_saves
 
 
 def _game_selection_menu(title: str, saves: list, extra_items: Optional[list] = None) -> Optional[SaveFile]:
