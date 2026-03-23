@@ -4,14 +4,14 @@ from typing import Optional
 
 from ur.ai.bots import Bot
 from ur.cli.tui.board import Board
-from ur.cli.tui.constants import C_BOLD_TEXT, C_P1, C_P2, C_RESET, C_TEXT, DEFEAT_ART, VICTORY_ART
+from ur.cli.tui.constants import C_BOLD_TEXT, C_P1, C_P2, C_RESET, DEFEAT_ART, VICTORY_ART
 from ur.cli.tui.i18n import t
-from ur.cli.tui.widgets import Menu
+from ur.cli.tui.output import out, word_wrap, center
 from ur.lan.protocol import ClientProtocol, HostProtocol
 from ur.cli.tui.utils import GameUtils
 from dataclasses import asdict
 
-from ur.game.engine import Action, Engine, Move, Player
+from ur.game.engine import Action, Engine, Player
 from ur.lan.network import PORT, Client, Server
 from ur.game.rules import P1_PATH, P2_PATH
 from ur.storage.saves import (
@@ -36,10 +36,10 @@ class Match:
 
     def print_header(self, title: str):
         self.navigation.clear()
-        print(f"{C_BOLD_TEXT}=== {title} ==={C_RESET}\n")
+        out(f"{C_BOLD_TEXT}=== {title} ==={C_RESET}\n")
 
     def show_message(self, msg: str, delay: float = 0.0):
-        print(msg)
+        out(center(msg))
         if delay > 0:
             time.sleep(delay)
 
@@ -49,7 +49,8 @@ class Match:
             self.ui.draw(show_labels=show_labels)
             local_idx = 0 if self.ui._local is self.engine.p1 else 1
             opp_name = self.ui._top.name
-            print(f"{t('match.last_action')}{GameUtils.format_action(self.engine.last_action, local_idx, opp_name)}")
+            action_text = f"{t('match.last_action')}{GameUtils.format_action(self.engine.last_action, local_idx, opp_name)}"
+            out(word_wrap(action_text, centered=True))
 
     def save_state(self, mode: str):
         """Saves the current engine state to disk."""
@@ -64,7 +65,7 @@ class Match:
         if self.save_path:
             delete_save(self.save_path)
         self.navigation.clear()
-        print(VICTORY_ART if is_victory else DEFEAT_ART)
+        out(VICTORY_ART if is_victory else DEFEAT_ART)
         time.sleep(5)
         self.navigation.print_commands()
         self.navigation.check_global_commands(
@@ -151,9 +152,9 @@ class HostMatch(Match):
         except Exception:
             local_ip = "127.0.0.1"
 
-        print(f"{t('host.your_ip')}{C_P1}{local_ip}{C_RESET}")
-        print(t("host.listening", port=str(PORT)))
-        print(t("host.waiting"))
+        out(f"{t('host.your_ip')}{C_P1}{local_ip}{C_RESET}")
+        out(t("host.listening", port=str(PORT)))
+        out(t("host.waiting"))
 
         try:
             client_ip = self.server.wait_for_client()
@@ -191,7 +192,7 @@ class HostMatch(Match):
                 self.update_display()
 
             def on_opponent_thinking():
-                print(t("match.waiting_opponent"))
+                out(center(t("match.waiting_opponent")))
 
             def on_no_moves(roll: int):
                 self.save_state("lan")
@@ -235,7 +236,7 @@ class ClientMatch(Match):
 
     def start(self):
         self.print_header(t("join.title"))
-        print(t("match.connecting", host=self.host_ip, port=str(PORT)))
+        out(t("match.connecting", host=self.host_ip, port=str(PORT)))
         try:
             self.client.connect()
         except (ConnectionRefusedError, OSError, socket.timeout):
@@ -263,7 +264,7 @@ class ClientMatch(Match):
                 self.engine.last_action = Action(**last_action)
                 self.update_display()
                 GameUtils.animate_dice(t("match.opponent_turn_anim"), C_P2, roll)
-                print(t("match.waiting_opponent"))
+                out(center(t("match.waiting_opponent")))
 
             def on_state(board: dict, last_action: dict):
                 self.engine.restore(board)

@@ -15,6 +15,7 @@ from ur.cli.tui.constants import (
     LOGO,
 )
 from ur.cli.tui.i18n import t
+from ur.cli.tui.output import center, out
 
 
 def get_keystroke() -> str:
@@ -59,12 +60,11 @@ class Navigation:
     @staticmethod
     def print_commands(hint: Optional[str] = None) -> None:
         text = hint if hint is not None else Navigation.commands_hint()
-        print(f"\n{text}\n")
+        out(f"\n{center(text)}\n")
 
     @staticmethod
     def clear():
-        sys.stdout.write("\033[2J\033[H")
-        sys.stdout.flush()
+        out("\033[2J\033[H", end="")
 
 class Menu:
     def __init__(self, title: str):
@@ -80,25 +80,25 @@ class Menu:
 
         total_lines = len(LOGO) + 2 + (len(self.options) + 2) + 2
         top_pad = max(0, (height - total_lines) // 2)
-        print("\n" * top_pad, end="")
+        out("\n" * top_pad, end="")
 
         logo_width = max(len(ANSI_ESCAPE.sub('', line)) for line in LOGO)
         logo_pad = max(0, (width - logo_width) // 2)
 
         for line in LOGO:
-            print(" " * logo_pad + line)
+            out(" " * logo_pad + line)
 
-        print("\n")
+        out("\n")
 
         title_clean = f"=== {self.title} ==="
         title_pad = max(0, (width - len(title_clean)) // 2)
-        print(" " * title_pad + f"{C_BOLD_TEXT}{title_clean}{C_RESET}\n")
+        out(" " * title_pad + f"{C_BOLD_TEXT}{title_clean}{C_RESET}\n")
 
         box_width = logo_width
         box_pad = max(0, (width - box_width) // 2)
         inner_width = box_width - 2
 
-        print(" " * box_pad + f"{C_BOARD}╔" + "═" * inner_width + f"╗{C_RESET}")
+        out(" " * box_pad + f"{C_BOARD}╔" + "═" * inner_width + f"╗{C_RESET}")
 
         for i, (text, _) in enumerate(self.options):
             raw_text = ANSI_ESCAPE.sub('', text)
@@ -110,12 +110,12 @@ class Menu:
             opt_padded = " " * pad_left + text + " " * pad_right
 
             if i == selected_idx:
-                print(" " * box_pad + f"{C_BOARD}║{C_HOVER}{opt_padded}{C_RESET}{C_BOARD}║{C_RESET}")
+                out(" " * box_pad + f"{C_BOARD}║{C_HOVER}{opt_padded}{C_RESET}{C_BOARD}║{C_RESET}")
             else:
-                print(" " * box_pad + f"{C_BOARD}║{C_RESET}{opt_padded}{C_BOARD}║{C_RESET}")
+                out(" " * box_pad + f"{C_BOARD}║{C_RESET}{opt_padded}{C_BOARD}║{C_RESET}")
 
-        print(" " * box_pad + f"{C_BOARD}╚" + "═" * inner_width + f"╝{C_RESET}")
-        print("\n") # Just leave a clean empty line instead of the footer text
+        out(" " * box_pad + f"{C_BOARD}╚" + "═" * inner_width + f"╝{C_RESET}")
+        out("\n") # Just leave a clean empty line instead of the footer text
 
     def prompt(self):
         """Displays the interactive menu and blocks until a selection is made."""

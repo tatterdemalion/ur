@@ -7,6 +7,7 @@ from ur.cli.tui.board import Board
 from ur.cli.tui.constants import C_BOARD, C_BOLD_TEXT, C_ITALIC, C_P1, C_P2, C_RESET, C_ROSETTA, C_TUTORIAL, TEMPLATE
 from ur.cli.tui.i18n import t
 from ur.cli.flows.match import Match
+from ur.cli.tui.output import out
 from ur.cli.tui.utils import GameUtils
 from ur.game.engine import Action, ActionType, Engine, Move, Player
 from ur.game.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
@@ -91,7 +92,7 @@ class TutorialMatch(Match):
 
     def _narrate(self, key: str, **kwargs):
         text = t(key, **kwargs)
-        print(f"\n{C_TUTORIAL}{text}{C_RESET}\n")
+        out(f"\n{C_TUTORIAL}{text}{C_RESET}\n")
 
     def _pause(self):
         text = t("tuto.press_enter", bold=C_BOLD_TEXT, reset=C_TUTORIAL)
@@ -122,17 +123,17 @@ class TutorialMatch(Match):
         def draw_state(current_cells: dict, p1_text: str = "", p2_text: str = ""):
             self.navigation.clear()
             title = t("tuto.board_title")
-            print(f"{C_BOLD_TEXT}=== {title} ==={C_RESET}\n")
+            out(f"{C_BOLD_TEXT}=== {title} ==={C_RESET}\n")
 
             # Wrap the visual character (arrow, space, or flower) in spaces to fit the 3-char slot
             formatted_cells = {k: f" {v} " for k, v in current_cells.items()}
             board = TEMPLATE.format(**formatted_cells)
-            print(f"{C_BOARD}{board}{C_RESET}\n")
+            out(f"{C_BOARD}{board}{C_RESET}\n")
 
             if p1_text:
-                print(f"{C_TUTORIAL}{p1_text}{C_RESET}\n")
+                out(f"{C_TUTORIAL}{p1_text}{C_RESET}\n")
             if p2_text:
-                print(f"{C_TUTORIAL}{p2_text}{C_RESET}\n")
+                out(f"{C_TUTORIAL}{p2_text}{C_RESET}\n")
 
         # 1. Base Empty Board
         cells = {ch: " " for ch in "abcdefghijklmnopqrst"}
@@ -194,12 +195,12 @@ class TutorialMatch(Match):
     def _show_dice_explainer(self):
         """Teaches the dice mechanic by demoing all five possible outcomes, then continues."""
         self.navigation.clear()
-        print(f"\n{C_TUTORIAL}{t('tuto.dice_explainer')}{C_RESET}\n")
+        out(f"\n{C_TUTORIAL}{t('tuto.dice_explainer')}{C_RESET}\n")
         self._pause()
 
         for demo_roll in range(5):
             GameUtils.animate_dice("", C_P1, demo_roll)
-            print(f"{C_TUTORIAL}{t('tuto.dice_demo_result', roll=str(demo_roll))}{C_RESET}\n")
+            out(f"{C_TUTORIAL}{t('tuto.dice_demo_result', roll=str(demo_roll))}{C_RESET}\n")
             time.sleep(1.2)
 
         time.sleep(1)
@@ -291,7 +292,7 @@ class TutorialMatch(Match):
                 roll=roll_str, p1=C_P1, p2=C_P2, p2_name=self.p2.name,
                 rosetta=C_ROSETTA, bold=C_BOLD_TEXT, reset=C_RESET + C_TUTORIAL,
             )
-            print(f"\n{C_TUTORIAL}{hint_text}{C_RESET}\n")
+            out(f"\n{C_TUTORIAL}{hint_text}{C_RESET}\n")
 
             # 5. Get Move & Execute
             if not valid_moves:

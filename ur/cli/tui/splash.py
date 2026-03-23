@@ -14,6 +14,7 @@ from ur.cli.tui.constants import (
     C_TEXT, LOGO,
 )
 from ur.cli.tui.i18n import t
+from ur.cli.tui.output import out
 from ur.cli.tui.widgets import get_keystroke
 
 _TASK_KEYS = [
@@ -25,7 +26,7 @@ _TASK_KEYS = [
 ]
 
 def animate_loading():
-    sys.stdout.write("\033[2J\033[H")
+    out("\033[2J\033[H", end="")
 
     try:
         cols, lines = os.get_terminal_size()
@@ -36,20 +37,20 @@ def animate_loading():
 
     total_lines = len(LOGO) + 5  # Adjusted for 3 lines of animation
     top_pad = max(0, (lines - total_lines) // 2)
-    print("\n" * top_pad, end="")
+    out("\n" * top_pad, end="")
 
     for line in LOGO:
-        print(" " * max(0, (cols - logo_width) // 2) + line)
+        out(" " * max(0, (cols - logo_width) // 2) + line)
 
     # 3 blank lines so we have space to overwrite our 3-line animation
-    print("\n\n\n")
+    out("\n\n\n")
 
     bar_length = 40
     bar_pad = max(0, (cols - bar_length - 2) // 2)
 
     for i in range(bar_length + 1):
         # ANSI Magic: Move cursor up 3 lines (\033[3A), return to start (\r), clear to bottom (\033[J)
-        sys.stdout.write("\033[3A\r\033[J")
+        out("\033[3A\r\033[J", end="")
 
         # --- 1. THE CINEMATIC CHASE ANIMATION ---
         track = [" "] * bar_length
@@ -77,7 +78,7 @@ def animate_loading():
             track[-1] = f"{C_ROSETTA}①{C_RESET}"
 
         # Line 1: Track
-        print(" " * bar_pad + "".join(track))
+        out(" " * bar_pad + "".join(track))
 
         # --- 2. THE PROGRESS BAR ---
         percent = i / bar_length
@@ -86,7 +87,7 @@ def animate_loading():
         bar = f"[{filled}{empty}{C_RESET}]"
 
         # Line 2: Bar
-        print(" " * bar_pad + bar)
+        out(" " * bar_pad + bar)
 
         # --- 3. THE TEXT ---
         task_idx = min(int(percent * len(_TASK_KEYS)), len(_TASK_KEYS) - 1)
@@ -94,14 +95,14 @@ def animate_loading():
 
         # Line 3: Text (Centered dynamically to the terminal width)
         task_pad = max(0, (cols - len(task_str)) // 2)
-        print(" " * task_pad + f"{C_TEXT}{task_str}{C_RESET}")
+        out(" " * task_pad + f"{C_TEXT}{task_str}{C_RESET}")
 
         time.sleep(random.uniform(0.02, 0.06))
 
     time.sleep(0.5)
     prompt = f"{C_ROSETTA}{t('splash.press_enter')}{C_RESET}"
     prompt_raw = ANSI_ESCAPE.sub('', prompt)
-    print("\n" + " " * max(0, (cols - len(prompt_raw)) // 2) + prompt)
+    out("\n" + " " * max(0, (cols - len(prompt_raw)) // 2) + prompt)
 
     get_keystroke()
 

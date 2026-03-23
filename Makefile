@@ -24,6 +24,3 @@ watch:
 
 play:
 	$(PYTHON) -m ur.play
-
-tutorial:
-	TUTORIAL_STEP=$(or $(STEP),1) $(PYTHON) -m ur.play

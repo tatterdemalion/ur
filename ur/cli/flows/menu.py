@@ -7,6 +7,7 @@ from ur.cli.tui.i18n import set_language, t
 from ur.cli.flows.match import ClientMatch, HostMatch, LocalMatch
 from ur.cli.flows.tutorial import TutorialMatch
 from ur.cli.tui.widgets import Menu, Navigation
+from ur.cli.tui.output import out
 from ur.cli.tui.utils import GameUtils
 from ur.storage.session import Session
 from ur.storage.saves import SaveFile, list_saves
@@ -109,7 +110,7 @@ def main_menu():
                 match.start()
             elif choice == "join_game":
                 Navigation.clear()
-                print(f"{C_BOLD_TEXT}=== {t('join.title')} ==={C_RESET}\n")
+                out(f"{C_BOLD_TEXT}=== {t('join.title')} ==={C_RESET}\n")
                 last_ip = Session.load().get("last_ip", "")
                 prompt = (
                     t("join.enter_ip_last", last_ip=last_ip) if last_ip else t("join.enter_ip")

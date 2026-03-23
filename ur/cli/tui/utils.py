@@ -1,12 +1,12 @@
 import datetime
 import random
-import sys
 import time
-from typing import TYPE_CHECKING, Optional, Callable
+from typing import TYPE_CHECKING, Optional
 
 from ur.ai.bots import Bot, RandomBot, GreedyBot, StrategicBot
 from ur.cli.tui.constants import C_BOARD, C_ITALIC, C_P1, C_P2, C_RESET, C_ROSETTA, C_SCORE, NUM_CIRCLES
 from ur.cli.tui.i18n import t
+from ur.cli.tui.output import center, out, word_wrap
 from ur.game.engine import Action, ActionType, Engine, Move, Player
 from ur.game.rules import FINISH, ROSETTAS
 
@@ -15,35 +15,30 @@ if TYPE_CHECKING:
 
 
 class GameUtils:
-    @staticmethod
-    def animate_dice(turn_text: str, player_color: str, roll: int):
-        print(turn_text)
+    @classmethod
+    def animate_dice(cls, turn_text: str, player_color: str, roll: int):
+        out(word_wrap(turn_text, centered=True))
         for _ in range(12):
             random_dots = " ".join(random.choice(["●", "○"]) for _ in range(4))
-            sys.stdout.write(
-                f"\r[{player_color}{random_dots}{C_RESET}] {C_BOARD}{C_ITALIC}Rolling{C_RESET}" + " " * 4
-            )
-            sys.stdout.flush()
+            frame = f"[{player_color}{random_dots}{C_RESET}] {C_BOARD}{C_ITALIC}Rolling{C_RESET}" + " " * 4
+            out("\r" + center(frame, offset=5), end="")
             time.sleep(0.06)
 
         final_faces = ["●"] * roll + ["○"] * (4 - roll)
         random.shuffle(final_faces)
         final_str = " ".join(final_faces)
-        sys.stdout.write(
-            f"\r[{player_color}{final_str}{C_RESET}] {C_BOARD}{C_ITALIC}Rolled{C_RESET} " + " " * 4
-        )
-        sys.stdout.flush()
+        rolled = f"[{player_color}{final_str}{C_RESET}] {C_BOARD}{C_ITALIC}Rolled{C_RESET} " + " " * 4
+        out("\r" + center(rolled, offset=5), end="")
         time.sleep(0.5)
-        sys.stdout.write(f"\r[{player_color}{final_str}{C_RESET}]" + " " * 12 + "\n\n")
-        sys.stdout.flush()
+        out("\r" + center(f"[{player_color}{final_str}{C_RESET}]" + " " * 12, offset=5), end="\n\n")
 
-    @staticmethod
-    def print_static_dice(turn_text: str, player_color: str, roll: int):
+    @classmethod
+    def print_static_dice(cls, turn_text: str, player_color: str, roll: int):
         """Instantly prints the dice state for redrawing the screen."""
-        print(turn_text)
+        out(word_wrap(turn_text, centered=True))
         final_faces = ["●"] * roll + ["○"] * (4 - roll)
         final_str = " ".join(final_faces)
-        print(f"[{player_color}{final_str}{C_RESET}]\n")
+        out(center(f"[{player_color}{final_str}{C_RESET}]"), end="\n\n")
 
     @staticmethod
     def build_move_hints(move: Move, p2: Player, bot_name: str) -> str:
@@ -83,7 +78,7 @@ class GameUtils:
     @classmethod
     def _print_move_options(cls, groups: dict):
         rosetta_keys = {4: "move.rosetta_first", 8: "move.rosetta_middle", 14: "move.rosetta_last"}
-        print(t("move.your_options"))
+        out(center(t("move.your_options")))
         for (status, target_progress, hint), moves in groups.items():
             moves.sort(key=lambda m: m.piece.identifier)
             piece_symbols = " ".join(f"{C_P1}{NUM_CIRCLES[m.piece.identifier]}{C_RESET}" for m in moves)
@@ -93,7 +88,7 @@ class GameUtils:
                 target_str = f"{t(rosetta_keys[target_progress]).capitalize()} {C_ROSETTA}✿{C_RESET}"
             else:
                 target_str = t("move.square", letter=chr(96 + target_progress))
-            print(f"  {piece_symbols} : {status} -> {target_str}{hint}")
+            out(word_wrap(f"  {piece_symbols} : {status} -> {target_str}{hint}", centered=True))
 
     @classmethod
     def get_human_move(
@@ -115,11 +110,13 @@ class GameUtils:
         is_single_choice = len(groups) == 1
         default_move = min(valid_moves, key=lambda m: m.piece.identifier)
 
-        prompt = t("move.select_prompt")
+        prompt_text = f"{t('move.select_prompt')} ({C_P1}{NUM_CIRCLES[1]}{C_RESET} - {C_P1}{NUM_CIRCLES[2]}{C_RESET} )"
         if is_single_choice:
-            prompt += t("move.select_prompt_default", id=str(default_move.piece.identifier))
+            prompt_text += t("move.select_prompt_default", id=str(default_move.piece.identifier))
         else:
-            prompt += t("move.select_prompt_end")
+            prompt_text += t("move.select_prompt_end")
+
+        prompt = center(prompt_text)
 
         navigation.print_commands(f"{C_BOARD}{t('nav.ingame_commands_hint')}{C_RESET}")
 
@@ -127,7 +124,7 @@ class GameUtils:
         error_msg = ""
         while True:
             if error_msg:
-                print(f"{C_P2}{error_msg}{C_RESET}")
+                out(word_wrap(f"{C_P2}{error_msg}{C_RESET}", centered=True))
                 error_msg = ""
 
             raw_input = input(prompt).strip()

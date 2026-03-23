@@ -16,6 +16,7 @@ from ur.cli.tui.constants import (
     TEMPLATE,
 )
 from ur.cli.tui.i18n import t
+from ur.cli.tui.output import out
 from ur.game.engine import Engine, Piece, Player
 from ur.game.rules import FINISH, ROSETTAS
 
@@ -62,10 +63,10 @@ class Board:
         # 1. Centered Title
         title_text = f"=== {t('board.title')} ==="
         title_pad = max(0, (cols - len(title_text)) // 2)
-        print(" " * title_pad + f"{C_BOLD_TEXT}{title_text}{C_RESET}")
+        out(" " * title_pad + f"{C_BOLD_TEXT}{title_text}{C_RESET}")
         if self.game_name:
             game_name_pad = max(0, (cols - len(self.game_name)) // 2)
-            print(" " * game_name_pad + f"{C_ITALIC}{self.game_name}{C_RESET}\n")
+            out(" " * game_name_pad + f"{C_ITALIC}{self.game_name}{C_RESET}\n")
 
         # Base margin to center the board itself
         board_margin = " " * max(0, (cols - board_width) // 2)
@@ -73,31 +74,31 @@ class Board:
         # 2. Centered Top Player Stats
         top_stat_len = len(top.name) + 2 + top_score
         top_stat_pad = " " * max(0, (board_width - top_stat_len) // 2)
-        print(board_margin + top_stat_pad + f"{C_P2}{top.name}  {'●' * top_score}{C_RESET}")
+        out(board_margin + top_stat_pad + f"{C_P2}{top.name}  {'●' * top_score}{C_RESET}")
 
         # Calculate width of waiting circles (e.g. " ● ● ●" is 2 chars per circle)
         top_waiting_len = top_waiting_count * 2
         top_wait_pad = " " * max(0, (board_width - top_waiting_len) // 2)
-        print(board_margin + top_wait_pad + f"{C_P2}{' ●' * top_waiting_count}{C_RESET}")
+        out(board_margin + top_wait_pad + f"{C_P2}{' ●' * top_waiting_count}{C_RESET}")
 
         # 3. The Centered Board
         board_str = TEMPLATE.format(**cells)
         for line in board_str.split("\n"):
-            print(board_margin + f"{C_BOARD}{line}{C_RESET}")
+            out(board_margin + f"{C_BOARD}{line}{C_RESET}")
 
         # 4. Centered Bottom Player Stats
         # Width calculation: N circles + (N-1) spaces
         bottom_waiting_len = max(0, bottom_waiting_count * 2 - 1) if bottom_waiting_count > 0 else 0
         bot_wait_pad = " " * max(0, (board_width - bottom_waiting_len) // 2)
         bot_wait_str = " ".join([f"{C_P1}{self._numbered_piece(p)}{C_RESET}" for p in bottom.pieces if p.progress == 0])
-        print(board_margin + bot_wait_pad + bot_wait_str)
+        out(board_margin + bot_wait_pad + bot_wait_str)
 
         bot_stat_len = len(bottom.name) + 2 + bottom_score
         bot_stat_pad = " " * max(0, (board_width - bot_stat_len) // 2)
-        print(board_margin + bot_stat_pad + f"{C_P1}{bottom.name}  {'●' * bottom_score}{C_RESET}")
+        out(board_margin + bot_stat_pad + f"{C_P1}{bottom.name}  {'●' * bottom_score}{C_RESET}")
 
         # Leave a blank line before the action logs begin
-        print()
+        out("")
 
     def _get_cells(self, show_labels: bool = False) -> dict[str, str]:
         bottom, top = self._bottom, self._top

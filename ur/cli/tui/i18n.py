@@ -47,12 +47,12 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tr": "  (Seçmek için yön tuşlarını, onaylamak için Enter'ı, dönmek için 'Q'yu kullanın)",
     },
     "nav.ingame_commands_hint": {
-        "en": "  (Type 'menu' to return to main menu, 'quit' to quit, 'help' for board labels and move hints)",
-        "tr": "  ('menu' ana menü, 'quit' çıkış, 'help' tahta etiketleri ve hamle ipuçları)",
+        "en": "  (commands: menu, quit, help)",
+        "tr": "  (komutlar: menu, quit, help)",
     },
     "nav.ingame_help_open_hint": {
-        "en": "  (Type 'back' to hide labels, 'menu' to return to main menu, 'quit' to quit)",
-        "tr": "  (Etiketleri gizlemek için 'back', 'menu' ana menü, 'quit' çıkış)",
+        "en": "  (commands: back, menu, quit)",
+        "tr": "  (commands: back, menu, quit)",
     },
     # ── Main menu ────────────────────────────────────────────────────────
     "menu.title": {
@@ -251,12 +251,12 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tr": "{name}'in taşını ele geçiriyor!",
     },
     "move.select_prompt": {
-        "en": "\nSelect a piece to move (1-7)",
-        "tr": "\nHareket ettirilecek taşı seç (1-7)",
+        "en": "\nSelect a piece to move",
+        "tr": "\nHareket ettirilecek taşı seç",
     },
     "move.select_prompt_default": {
         "en": " [ Enter for {id} ]: ",
-        "tr": " [ Enter ile {id} ]: ",
+        "tr": " [ {id} için Enter ]: ",
     },
     "move.select_prompt_end": {
         "en": ": ",
