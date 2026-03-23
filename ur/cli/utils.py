@@ -2,16 +2,15 @@ import datetime
 import random
 import sys
 import time
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Callable
 
-from ur.ai.bots import Bot
+from ur.ai.bots import Bot, RandomBot, GreedyBot, StrategicBot
 from ur.cli.constants import C_BOARD, C_ITALIC, C_P1, C_P2, C_RESET, C_ROSETTA, C_SCORE, NUM_CIRCLES
 from ur.cli.i18n import t
 from ur.game import Action, ActionType, Engine, Move, Player
 from ur.rules import FINISH, ROSETTAS
 
 if TYPE_CHECKING:
-    from ur.cli.widgets import Navigation
     from ur.cli.board import Board
 
 
@@ -248,3 +247,20 @@ class GameUtils:
             return f"{seconds // 2592000}mo ago"
         else:
             return f"{seconds // 31536000}y ago"
+
+    @staticmethod
+    def bot_by_name(name: str) -> Optional[Bot]:
+        bot_class:Optional[Bot] = {
+            "RandomBot": RandomBot,
+            "GreedyBot": GreedyBot,
+            "StrategicBot": StrategicBot
+        }.get(name)
+
+        if bot_class:
+            bot = bot_class()
+        else:
+            bot = None
+
+        return bot
+
+

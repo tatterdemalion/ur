@@ -45,12 +45,6 @@ def multiplayer_game_menu() -> Optional[SaveFile]:
     )
 
 
-def _bot_by_name(name: str) -> Optional[Bot]:
-    return {"RandomBot": RandomBot, "GreedyBot": GreedyBot, "StrategicBot": StrategicBot}.get(
-        name, lambda: None
-    )()
-
-
 def select_bot_menu() -> Optional[Bot]:
     menu = Menu(t("bot.select_title"))
     menu.add(t("bot.random"), RandomBot())
@@ -99,7 +93,9 @@ def main_menu():
                 bot = select_bot_menu()
             elif isinstance(choice, SaveFile):
                 save = choice
-                bot = _bot_by_name(save.p2_name) or select_bot_menu()
+                bot = GameUtils.bot_by_name(save.p2_name)
+                if not bot:
+                    bot = select_bot_menu()
 
             if bot:
                 LocalMatch(bot, navigation, save=save).start()
