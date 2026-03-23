@@ -212,9 +212,7 @@ class TutorialMatch(Match):
             roll = self.engine.roll_dice()
             valid_moves = self.engine.get_valid_moves(roll)
             self.update_display(show_labels=True)
-            GameUtils.animate_dice(
-                t("match.opponent_turn", name=self.p2.name), C_P2, roll
-            )
+            GameUtils.animate_dice(C_P2, roll)
             if not valid_moves:
                 self.engine.skip_turn(roll)
                 self._pause()
@@ -275,14 +273,8 @@ class TutorialMatch(Match):
 
             is_human_turn = self.engine.current_player == self.p1
             player_color = C_P1 if is_human_turn else C_P2
-            turn_text = (
-                t("match.your_turn")
-                if is_human_turn
-                else t("match.opponent_turn", name=self.p2.name)
-            )
-
             self.update_display(show_labels=True)
-            GameUtils.animate_dice(turn_text, player_color, roll)
+            GameUtils.animate_dice(player_color, roll)
 
             # Print Tutorial Hint
             dots = f"{C_P1}{'●' * roll}{'○' * (4 - roll)}{C_RESET + C_TUTORIAL}"
@@ -314,7 +306,7 @@ class TutorialMatch(Match):
                 else:
                     chosen_move = GameUtils.get_human_move(
                         restricted_moves if restricted_moves else valid_moves,
-                        self.ui, roll, turn_text, player_color
+                        self.ui, roll, player_color
                     )
                     if chosen_move is None:
                         return

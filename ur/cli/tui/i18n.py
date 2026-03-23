@@ -156,14 +156,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tr": "'{name}' devam ettiriliyor...",
     },
     # ── Match / in-game ───────────────────────────────────────────────────
-    "match.your_turn": {
-        "en": "Your turn.",
-        "tr": "Senin sıran.",
-    },
-    "match.opponent_turn": {
-        "en": "{name}'s turn.",
-        "tr": "Sıradaki oyuncu:{name}",
-    },
     "match.no_valid_moves": {
         "en": "No valid moves. Turn skipped.",
         "tr": "Geçerli hamle yok. Tur atlandı.",

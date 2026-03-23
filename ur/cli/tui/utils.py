@@ -16,8 +16,7 @@ if TYPE_CHECKING:
 
 class GameUtils:
     @classmethod
-    def animate_dice(cls, turn_text: str, player_color: str, roll: int):
-        out(word_wrap(turn_text, centered=True))
+    def animate_dice(cls, player_color: str, roll: int):
         for _ in range(12):
             random_dots = " ".join(random.choice(["●", "○"]) for _ in range(4))
             frame = f"[{player_color}{random_dots}{C_RESET}] {C_BOARD}{C_ITALIC}Rolling{C_RESET}" + " " * 4
@@ -33,9 +32,8 @@ class GameUtils:
         out("\r" + center(f"[{player_color}{final_str}{C_RESET}]" + " " * 12, offset=5), end="\n\n")
 
     @classmethod
-    def print_static_dice(cls, turn_text: str, player_color: str, roll: int):
+    def print_static_dice(cls, player_color: str, roll: int):
         """Instantly prints the dice state for redrawing the screen."""
-        out(word_wrap(turn_text, centered=True))
         final_faces = ["●"] * roll + ["○"] * (4 - roll)
         final_str = " ".join(final_faces)
         out(center(f"[{player_color}{final_str}{C_RESET}]"), end="\n\n")
@@ -96,7 +94,6 @@ class GameUtils:
         valid_moves: list[Move],
         ui: "Board",
         roll: int,
-        turn_text: str,
         player_color: str
     ) -> Optional[Move]:
 
@@ -132,7 +129,7 @@ class GameUtils:
             if raw_input.lower() == "help":
                 help_open = True
                 ui.draw(show_labels=True)
-                cls.print_static_dice(turn_text, player_color, roll)
+                cls.print_static_dice(player_color, roll)
                 cls._print_move_options(groups)
                 navigation.print_commands(f"{C_BOARD}{t('nav.ingame_help_open_hint')}{C_RESET}")
                 continue
@@ -140,7 +137,7 @@ class GameUtils:
             if raw_input.lower() == "back" and help_open:
                 help_open = False
                 ui.draw(show_labels=False)
-                cls.print_static_dice(turn_text, player_color, roll)
+                cls.print_static_dice(player_color, roll)
                 navigation.print_commands(f"{C_BOARD}{t('nav.ingame_commands_hint')}{C_RESET}")
                 continue
 

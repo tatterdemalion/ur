@@ -98,12 +98,7 @@ class LocalMatch(Match):
             self.update_display()
 
             player_color = C_P1 if self.engine.current_player == self.p1 else C_P2
-            turn_text = (
-                t("match.your_turn")
-                if self.engine.current_player == self.p1
-                else t("match.opponent_turn", name=self.engine.current_player.name)
-            )
-            GameUtils.animate_dice(turn_text, player_color, roll)
+            GameUtils.animate_dice(player_color, roll)
 
             if not valid_moves:
                 self.show_message(t("match.no_valid_moves"), 0)
@@ -113,7 +108,7 @@ class LocalMatch(Match):
                 continue
 
             if self.engine.current_player == self.p1:
-                chosen_move = GameUtils.get_human_move(valid_moves, self.ui, roll, turn_text, player_color)
+                chosen_move = GameUtils.get_human_move(valid_moves, self.ui, roll, player_color)
                 if chosen_move is None:
                     return  # Abort to menu
             else:
@@ -183,9 +178,8 @@ class HostMatch(Match):
 
             def on_my_turn(valid_moves: list, roll: int):
                 self.update_display()
-                turn_text = t("match.your_turn")
-                GameUtils.animate_dice(turn_text, C_P1, roll)
-                return GameUtils.get_human_move(valid_moves, self.ui, roll, turn_text, C_P1)
+                GameUtils.animate_dice(C_P1, roll)
+                return GameUtils.get_human_move(valid_moves, self.ui, roll, C_P1)
 
             def on_state(last_action):
                 self.save_state("lan")
@@ -263,7 +257,7 @@ class ClientMatch(Match):
                 self.engine.restore(board)
                 self.engine.last_action = Action(**last_action)
                 self.update_display()
-                GameUtils.animate_dice(t("match.opponent_turn_anim"), C_P2, roll)
+                GameUtils.animate_dice(C_P2, roll)
                 out(center(t("match.waiting_opponent")))
 
             def on_state(board: dict, last_action: dict):
@@ -285,9 +279,8 @@ class ClientMatch(Match):
                 valid_moves = self.engine.get_valid_moves(roll)
                 valid_moves = [m for m in valid_moves if m.piece.identifier in set(valid_move_ids)]
                 self.update_display()
-                turn_text = t("match.your_turn")
-                GameUtils.animate_dice(turn_text, C_P1, roll)
-                chosen_move = GameUtils.get_human_move(valid_moves, self.ui, roll, turn_text, C_P1)
+                GameUtils.animate_dice(C_P1, roll)
+                chosen_move = GameUtils.get_human_move(valid_moves, self.ui, roll, C_P1)
                 if chosen_move is None:
                     return None
                 return chosen_move.piece.identifier
