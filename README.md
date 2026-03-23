@@ -83,7 +83,9 @@ The rules follow the standard modern interpretation of the ancient Mesopotamian 
 - [x] Engine & Entities
 - [x] Bot Simulation Framework
 - [x] LAN Multiplayer (Raw TCP Sockets)
+- [x] Load & Save Games
 - [x] Session Persistence (JSON Auto-saves)
+- [x] Better TTY control with termios
 - [ ] **Phase 3:** Machine Learning (Q-Learning bot trained over millions of self-play games)
 - [ ] **Phase 4:** Online Multiplayer (WebSockets / FastAPI Backend)
 
