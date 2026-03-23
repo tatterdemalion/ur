@@ -11,7 +11,7 @@ without any network/engine logic leaking upward.
 from dataclasses import asdict
 from typing import Callable, Optional
 
-from ur.game.engine import Action, Engine, Move, Player
+from ur.game.engine import Engine, Move, Player
 from ur.lan.network import Client, Server
 
 
