@@ -32,11 +32,14 @@ def out(text: str, end: str = "\n") -> None:
     sys.stdout.flush()
 
 
-def word_wrap(text: str, wrap: int = 120, centered: bool = False) -> str:
+def word_wrap(text: str, wrap: int = 100, centered: bool = False) -> str:
     """Print text centered in the terminal, word-wrapping at `wrap` visible chars."""
     plain = ANSI_ESCAPE.sub("", text)
+
     if len(plain) <= wrap:
         return center(text) if centered else text
     else:
         for line in textwrap.wrap(plain, wrap):
             return center(line) if centered else line
+
+    return text

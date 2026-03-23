@@ -47,8 +47,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tr": "  (Seçmek için yön tuşlarını, onaylamak için Enter'ı, dönmek için 'Q'yu kullanın)",
     },
     "nav.ingame_commands_hint": {
-        "en": "  (commands: menu, quit, help)",
-        "tr": "  (komutlar: menu, quit, help)",
+        "en": "  (possible commands: menu, quit, help)",
+        "tr": "  (verilebilecek komutlar: menu, quit, help)",
     },
     "nav.ingame_help_open_hint": {
         "en": "  (commands: back, menu, quit)",

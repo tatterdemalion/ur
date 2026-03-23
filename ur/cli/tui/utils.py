@@ -110,7 +110,7 @@ class GameUtils:
         is_single_choice = len(groups) == 1
         default_move = min(valid_moves, key=lambda m: m.piece.identifier)
 
-        prompt_text = f"{t('move.select_prompt')} ({C_P1}{NUM_CIRCLES[1]}{C_RESET} - {C_P1}{NUM_CIRCLES[2]}{C_RESET} )"
+        prompt_text = f"{t('move.select_prompt')} {C_P1}{NUM_CIRCLES[1]}{C_RESET} ....{C_P1}{NUM_CIRCLES[7]}{C_RESET} "
         if is_single_choice:
             prompt_text += t("move.select_prompt_default", id=str(default_move.piece.identifier))
         else:
