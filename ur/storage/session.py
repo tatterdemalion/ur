@@ -3,7 +3,7 @@ import json
 
 
 class Session:
-    FILE = os.path.join(os.path.dirname(__file__), "..", "session.json")
+    FILE = os.path.join(os.path.dirname(__file__), "../..", "session.json")
 
     @classmethod
     def load(cls) -> dict:
