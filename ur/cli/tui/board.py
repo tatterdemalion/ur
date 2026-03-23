@@ -43,9 +43,9 @@ class Board:
 
         # Get terminal size dynamically
         try:
-            cols, lines = os.get_terminal_size()
+            cols, _ = os.get_terminal_size()
         except OSError:
-            cols, lines = 80, 24  # Fallback if standard out is piped or IDE console is weird
+            cols = 80
 
         cells = self._get_cells(show_labels=show_labels)
         bottom, top = self._bottom, self._top
@@ -58,10 +58,6 @@ class Board:
 
         # The physical width of the ASCII board from the TEMPLATE is exactly 33 characters
         board_width = 33
-
-        # Calculate Vertical Padding (leaving room for the action log and input prompts at the bottom)
-        v_pad = max(0, (lines - 15) // 2)
-        print("\n" * v_pad, end="")
 
         # 1. Centered Title
         title_text = f"=== {t('board.title')} ==="
