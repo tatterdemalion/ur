@@ -2,9 +2,9 @@ import threading
 import time
 import unittest
 
-from ur.cli.protocol import ClientProtocol, HostProtocol
 from ur.game import Engine, Player
-from ur.network import Client, Connection, Server
+from ur.lan.network import Client, Connection, Server
+from ur.lan.protocol import ClientProtocol, HostProtocol
 from ur.rules import FINISH, P1_PATH, P2_PATH
 
 

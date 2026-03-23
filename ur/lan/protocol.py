@@ -12,7 +12,7 @@ from dataclasses import asdict
 from typing import Callable, Optional
 
 from ur.game import Action, Engine, Move, Player
-from ur.network import Client, Server
+from ur.lan.network import Client, Server
 
 
 class HostProtocol:
