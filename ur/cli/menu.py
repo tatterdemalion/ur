@@ -1,7 +1,4 @@
-import json
-import os
 import sys
-import time
 from typing import Optional
 
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
@@ -11,26 +8,8 @@ from ur.cli.match import ClientMatch, HostMatch, LocalMatch
 from ur.cli.tutorial import TutorialMatch
 from ur.cli.widgets import Menu, Navigation
 from ur.cli.utils import GameUtils
+from ur.cli.session import Session
 from ur.saves import SaveFile, list_saves
-
-
-class Session:
-    FILE = os.path.join(os.path.dirname(__file__), "..", "session.json")
-
-    @classmethod
-    def load(cls) -> dict:
-        try:
-            with open(cls.FILE) as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return {}
-
-    @classmethod
-    def save(cls, data: dict):
-        session = cls.load()
-        session.update(data)
-        with open(cls.FILE, "w") as f:
-            json.dump(session, f)
 
 
 def _game_selection_menu(title: str, saves: list, extra_items: Optional[list] = None) -> Optional[SaveFile]:
@@ -81,7 +60,7 @@ def select_bot_menu() -> Optional[Bot]:
     return menu.prompt()
 
 
-def _language_menu():
+def language_menu():
     lang_keys = {"en": "lang.english", "tr": "lang.turkish"}
     menu = Menu(t("lang.title"))
     for code, key in lang_keys.items():
@@ -158,4 +137,4 @@ def main_menu():
         elif choice == "tutorial":
             TutorialMatch(navigation).start()
         elif choice == "language":
-            _language_menu()
+            language_menu()
