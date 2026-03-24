@@ -18,7 +18,7 @@ from ur.cli.tui.constants import (
     TEMPLATE,
 )
 from ur.cli.tui.i18n import t
-from ur.cli.tui.output import out
+from ur.cli.tui.output import out, center
 from ur.game.engine import Engine, Piece, Player
 from ur.game.rules import FINISH, ROSETTAS
 
@@ -44,12 +44,6 @@ class Board:
     def draw(self, show_labels: bool = False):
         self.navigation.clear()
 
-        # Get terminal size dynamically
-        try:
-            cols, _ = os.get_terminal_size()
-        except OSError:
-            cols = 80
-
         cells = self._get_cells(show_labels=show_labels)
         bottom, top = self._bottom, self._top
 
@@ -57,49 +51,24 @@ class Board:
         top_score = sum(1 for p in top.pieces if p.progress == FINISH)
 
         top_waiting_count = sum(1 for p in top.pieces if p.progress == 0)
-        bottom_waiting_count = sum(1 for p in bottom.pieces if p.progress == 0)
 
-        # The physical width of the ASCII board from the TEMPLATE is exactly 33 characters
-        board_width = 33
-
-        # 1. Centered Title
-        title_text = f"=== {t('board.title')} ==="
-        title_pad = max(0, (cols - len(title_text)) // 2)
-        out(" " * title_pad + f"{C_BOLD_TEXT}{title_text}{C_RESET}")
+        out(center(f"{C_BOLD_TEXT}=== {t('board.title')} ==={C_RESET}"))
         if self.game_name:
-            game_name_pad = max(0, (cols - len(self.game_name)) // 2)
-            out(" " * game_name_pad + f"{C_ITALIC}{self.game_name}{C_RESET}\n")
+            out(center(f"{C_ITALIC}{self.game_name}{C_RESET}\n"))
 
-        # Base margin to center the board itself
-        board_margin = " " * max(0, (cols - board_width) // 2)
+        out(center(f"{C_P2}{top.name}  {'●' * top_score}{C_RESET}"))
 
-        # 2. Centered Top Player Stats
-        top_stat_len = len(top.name) + 2 + top_score
-        top_stat_pad = " " * max(0, (board_width - top_stat_len) // 2)
-        out(board_margin + top_stat_pad + f"{C_P2}{top.name}  {'●' * top_score}{C_RESET}")
+        out(center(f"{C_P2}{' ●' * top_waiting_count}{C_RESET}"))
 
-        # Calculate width of waiting circles (e.g. " ● ● ●" is 2 chars per circle)
-        top_waiting_len = top_waiting_count * 2
-        top_wait_pad = " " * max(0, (board_width - top_waiting_len) // 2)
-        out(board_margin + top_wait_pad + f"{C_P2}{' ●' * top_waiting_count}{C_RESET}")
-
-        # 3. The Centered Board
         board_str = TEMPLATE.format(**cells)
         for line in board_str.split("\n"):
-            out(board_margin + f"{C_BOARD}{line}{C_RESET}")
+            out(center(f"{C_BOARD}{line}{C_RESET}"))
 
-        # 4. Centered Bottom Player Stats
-        # Width calculation: N circles + (N-1) spaces
-        bottom_waiting_len = max(0, bottom_waiting_count * 2 - 1) if bottom_waiting_count > 0 else 0
-        bot_wait_pad = " " * max(0, (board_width - bottom_waiting_len) // 2)
         bot_wait_str = " ".join([f"{C_P1}{self._numbered_piece(p)}{C_RESET}" for p in bottom.pieces if p.progress == 0])
-        out(board_margin + bot_wait_pad + bot_wait_str)
+        out(center(bot_wait_str))
 
-        bot_stat_len = len(bottom.name) + 2 + bottom_score
-        bot_stat_pad = " " * max(0, (board_width - bot_stat_len) // 2)
-        out(board_margin + bot_stat_pad + f"{C_P1}{bottom.name}  {'●' * bottom_score}{C_RESET}")
+        out(center(f"{C_P1}{bottom.name}  {'●' * bottom_score}{C_RESET}"))
 
-        # Leave a blank line before the action logs begin
         out("")
 
     def _get_cells(self, show_labels: bool = False) -> dict[str, str]:

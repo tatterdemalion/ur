@@ -55,10 +55,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tr": "  (commands: back, menu, quit)",
     },
     # ── Main menu ────────────────────────────────────────────────────────
-    "menu.title": {
-        "en": "THE ROYAL GAME OF UR",
-        "tr": "UR'UN KRALIYET OYUNU",
-    },
     "menu.single_player": {
         "en": "Single Player",
         "tr": "Tek Oyuncu",

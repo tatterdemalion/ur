@@ -72,7 +72,8 @@ def main_menu():
     navigation = Navigation()
 
     while True:
-        menu = Menu(t("menu.title"))
+        subtitle = "✧ ══════════════ ✿ ══════════════ ✧"
+        menu = Menu(subtitle)
         menu.add(t("menu.single_player"), "single_player")
         menu.add(t("menu.multi_player"), "multi_player")
         menu.add(t("menu.tutorial"), "tutorial")

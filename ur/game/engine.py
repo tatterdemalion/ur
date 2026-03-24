@@ -31,7 +31,6 @@ class Stats:
     p2_waiting: int
 
 
-# --- 2. ENTITIES ---
 class Piece:
     def __init__(self, identifier: int, player: "Player"):
         self.identifier = identifier
@@ -65,7 +64,6 @@ class Player:
         return all(piece.progress == FINISH for piece in self.pieces)
 
 
-# --- 3. THE ENGINE ---
 class Engine:
     def __init__(self, p1: Player, p2: Player):
         self.p1 = p1

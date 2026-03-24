@@ -90,15 +90,12 @@ class Menu:
 
         out("\n")
 
-        title_clean = f"=== {self.title} ==="
-        title_pad = max(0, (width - len(title_clean)) // 2)
-        out(" " * title_pad + f"{C_BOLD_TEXT}{title_clean}{C_RESET}\n")
+        out(center(f"{C_BOLD_TEXT}{self.title}{C_RESET}\n"))
 
         box_width = logo_width
-        box_pad = max(0, (width - box_width) // 2)
         inner_width = box_width - 2
 
-        out(" " * box_pad + f"{C_BOARD}╔" + "═" * inner_width + f"╗{C_RESET}")
+        out(center(f"{C_BOARD}╔" + "═" * inner_width + f"╗{C_RESET}"))
 
         for i, (text, _) in enumerate(self.options):
             raw_text = ANSI_ESCAPE.sub('', text)
@@ -110,12 +107,12 @@ class Menu:
             opt_padded = " " * pad_left + text + " " * pad_right
 
             if i == selected_idx:
-                out(" " * box_pad + f"{C_BOARD}║{C_HOVER}{opt_padded}{C_RESET}{C_BOARD}║{C_RESET}")
+                out(center(f"{C_BOARD}║{C_HOVER}{opt_padded}{C_RESET}{C_BOARD}║{C_RESET}"))
             else:
-                out(" " * box_pad + f"{C_BOARD}║{C_RESET}{opt_padded}{C_BOARD}║{C_RESET}")
+                out(center(f"{C_BOARD}║{C_RESET}{opt_padded}{C_BOARD}║{C_RESET}"))
 
-        out(" " * box_pad + f"{C_BOARD}╚" + "═" * inner_width + f"╝{C_RESET}")
-        out("\n") # Just leave a clean empty line instead of the footer text
+        out(center(f"{C_BOARD}╚" + "═" * inner_width + f"╝{C_RESET}"))
+        out("\n")
 
     def prompt(self):
         """Displays the interactive menu and blocks until a selection is made."""
