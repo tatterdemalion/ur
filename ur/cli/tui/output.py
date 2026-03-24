@@ -25,6 +25,19 @@ def center(text: str, offset: int=0) -> str:
     return leading + (" " * offset) + pad + stripped
 
 
+def center_in(text: str, width: int) -> str:
+    """Return `text` padded symmetrically to fill `width` visible chars.
+
+    Unlike ``center()``, which only adds left padding to align in the
+    terminal, this pads both sides — intended for centering content inside
+    a fixed-width box column.
+    """
+    pad_total = max(0, width - ansi_len(text))
+    pad_l = pad_total // 2
+    pad_r = pad_total - pad_l
+    return ' ' * pad_l + text + ' ' * pad_r
+
+
 def out(text: str, end: str = "\n") -> None:
     """Write `text` to stdout with `end` appended, then flush."""
     sys.stdout.write(text + end)
@@ -105,14 +118,7 @@ def print_box(
     out(f"\n{center(top)}")
 
     if title:
-        tvis = ansi_len(title)
-        pad_total = inner_width - tvis
-        pad_l = pad_total // 2
-        pad_r = pad_total - pad_l
-        out(center(
-            f"{C_BOARD}║{' ' * pad_l}{title_color}{title}{C_RESET}"
-            f"{C_BOARD}{' ' * pad_r}║{C_RESET}"
-        ))
+        out(center(f"{C_BOARD}║{center_in(f'{title_color}{title}{C_RESET}', inner_width)}{C_BOARD}║{C_RESET}"))
         out(center(sep))
 
     for line in ansi_wordwrap(text, content_w):

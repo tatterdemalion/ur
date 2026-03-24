@@ -7,7 +7,7 @@ from ur.cli.tui.board import Board
 from ur.cli.tui.constants import C_BOARD, C_BOLD_TEXT, C_ITALIC, C_P1, C_P1_ROSETTA, C_P2, C_P2_ROSETTA, C_RESET, C_ROSETTA, C_TUTORIAL, TEMPLATE
 from ur.cli.tui.i18n import t
 from ur.cli.flows.match import Match
-from ur.cli.tui.output import ansi_len, center, out, print_box
+from ur.cli.tui.output import center, center_in, out, print_box
 from ur.cli.tui.utils import GameUtils
 from ur.game.engine import Action, ActionType, Engine, Move, Player
 from ur.game.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
@@ -128,12 +128,8 @@ class TutorialMatch(Match):
         def draw_state(current_cells: dict, p1_text: str = "", p2_text: str = ""):
             self.navigation.clear()
             title = t("tuto.board_title")
-            tvis = ansi_len(title)
-            pad_total = BOX_INNER_WIDTH - tvis
-            pad_l = pad_total // 2
-            pad_r = pad_total - pad_l
             out(center(f"{C_BOARD}╔{'═' * BOX_INNER_WIDTH}╗{C_RESET}"))
-            out(center(f"{C_BOARD}║{' ' * pad_l}{C_BOLD_TEXT}{title}{C_RESET}{C_BOARD}{' ' * pad_r}║{C_RESET}"))
+            out(center(f"{C_BOARD}║{center_in(f'{C_BOLD_TEXT}{title}{C_RESET}', BOX_INNER_WIDTH)}{C_BOARD}║{C_RESET}"))
             out(center(f"{C_BOARD}╚{'═' * BOX_INNER_WIDTH}╝{C_RESET}\n"))
 
             # Wrap the visual character (arrow, space, or flower) in spaces to fit the 3-char slot
