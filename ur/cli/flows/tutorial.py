@@ -136,17 +136,19 @@ class TutorialMatch(Match):
             # Wrap the visual character (arrow, space, or flower) in spaces to fit the 3-char slot
             formatted_cells = {k: f" {v} " for k, v in current_cells.items()}
             board = TEMPLATE.format(**formatted_cells)
-            out(f"{C_BOARD}{board}{C_RESET}\n")
+            for line in board.splitlines():
+                out(center(f"{C_BOARD}{line}{C_RESET}"))
+            out("")
 
             if p1_text:
-                out(f"{C_TUTORIAL}{p1_text}{C_RESET}\n")
+                out(center(f"{C_TUTORIAL}{p1_text}{C_RESET}"))
             if p2_text:
-                out(f"{C_TUTORIAL}{p2_text}{C_RESET}\n")
+                out(center(f"{C_TUTORIAL}{p2_text}{C_RESET}"))
 
         # 1. Base Empty Board
         cells = {ch: " " for ch in "abcdefghijklmnopqrst"}
         for r in rosettas:
-            cells[r] = f"{C_ROSETTA}✿{C_RESET}"
+            cells[r] = f"{C_ROSETTA}✿{C_BOARD}"
 
         p1_msg = t("tuto.path_p1", p1=C_P1, reset=C_RESET + C_TUTORIAL)
         draw_state(cells, p1_text=p1_msg)
@@ -159,23 +161,23 @@ class TutorialMatch(Match):
         for i in range(len(p1_keys)):
             # Turn the previous square into an arrow
             if i > 0:
-                cells[p1_keys[i-1]] = f"{C_P1}{p1_arrows[i-1]}{C_RESET}"
+                cells[p1_keys[i-1]] = f"{C_P1}{p1_arrows[i-1]}{C_BOARD}"
 
             # Use rosetta color when the piece lands on a rosetta cell
             color = C_P1_ROSETTA if p1_keys[i] in rosettas else C_P1
-            cells[p1_keys[i]] = f"{color}①{C_RESET}"
+            cells[p1_keys[i]] = f"{color}①{C_BOARD}"
             draw_state(cells, p1_text=p1_msg)
             time.sleep(0.15)  # Fast, smooth tracking
 
         # Leave the final arrow behind as the piece "exits" the board
-        cells[p1_keys[-1]] = f"{C_P1}{p1_arrows[-1]}{C_RESET}"
+        cells[p1_keys[-1]] = f"{C_P1}{p1_arrows[-1]}{C_BOARD}"
         draw_state(cells, p1_text=p1_msg)
         time.sleep(2.0)
 
         # 3. Clear the board for P2
         cells = {ch: " " for ch in "abcdefghijklmnopqrst"}
         for r in rosettas:
-            cells[r] = f"{C_ROSETTA}✿{C_RESET}"
+            cells[r] = f"{C_ROSETTA}✿{C_BOARD}"
 
         p2_msg = t("tuto.path_p2", p2=C_P2, p2_name=self.p2.name, reset=C_RESET + C_TUTORIAL)
         draw_state(cells, p1_text=p1_msg, p2_text=p2_msg)
@@ -187,15 +189,15 @@ class TutorialMatch(Match):
 
         for i in range(len(p2_keys)):
             if i > 0:
-                cells[p2_keys[i-1]] = f"{C_P2}{p2_arrows[i-1]}{C_RESET}"
+                cells[p2_keys[i-1]] = f"{C_P2}{p2_arrows[i-1]}{C_BOARD}"
 
             color = C_P2_ROSETTA if p2_keys[i] in rosettas else C_P2
-            cells[p2_keys[i]] = f"{color}●{C_RESET}"
+            cells[p2_keys[i]] = f"{color}●{C_BOARD}"
             draw_state(cells, p1_text=p1_msg, p2_text=p2_msg)
             time.sleep(0.15)
 
         # Leave the final arrow behind
-        cells[p2_keys[-1]] = f"{C_P2}{p2_arrows[-1]}{C_RESET}"
+        cells[p2_keys[-1]] = f"{C_P2}{p2_arrows[-1]}{C_BOARD}"
         draw_state(cells, p1_text=p1_msg, p2_text=p2_msg)
 
         self._pause()

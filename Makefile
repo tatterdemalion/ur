@@ -1,4 +1,4 @@
-.PHONY: install test lint format simulate play tutorial
+.PHONY: install test lint format simulate play tutorial tuto
 
 PYTHON = .venv/bin/python
 
@@ -24,3 +24,7 @@ watch:
 
 play:
 	$(PYTHON) -m ur.play
+
+# Jump straight to a tutorial step: make tuto STEP=3
+tuto:
+	$(PYTHON) -c "from ur.storage.session import Session; from ur.cli.tui.i18n import set_language; set_language(Session.load().get('language','en')); from ur.cli.tui.widgets import Navigation; from ur.cli.flows.tutorial import TutorialMatch; TutorialMatch(Navigation()).start($(or $(STEP),1))"
