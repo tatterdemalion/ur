@@ -5,7 +5,7 @@ from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
 from ur.cli.tui.constants import C_BOLD_TEXT, C_RESET, SCREEN_WIDTH
 from ur.cli.tui.i18n import set_language, t
 from ur.cli.flows.match import ClientMatch, HostMatch, LocalMatch
-from ur.cli.flows.tutorial import TutorialMatch
+from ur.cli.flows.tutorial import TutorialMatch, TUTORIAL_STEPS
 from ur.cli.tui.widgets import Menu, Navigation
 from ur.cli.tui.output import out
 from ur.cli.tui.utils import GameUtils
@@ -53,6 +53,24 @@ def select_bot_menu() -> Optional[Bot]:
     menu.add(t("bot.strategic"), StrategicBot())
     menu.add(t("menu.back"), None)
     return menu.prompt()
+
+
+def tutorial_menu(navigation):
+    while True:
+        menu = Menu(t("tuto.menu.title"))
+        menu.add(t("tuto.menu.start"), "start")
+        menu.add(t("menu.back"), None)
+        menu.add_separator(t("tuto.menu.steps"))
+        for step in TUTORIAL_STEPS:
+            menu.add(t(step.title_key), step.step_num)
+
+        choice = menu.prompt()
+        if choice is None:
+            return
+        elif choice == "start":
+            TutorialMatch(navigation).start()
+        else:
+            TutorialMatch(navigation).start(choice, single_step=True)
 
 
 def language_menu():
@@ -133,6 +151,6 @@ def main_menu():
                 main_menu()
 
         elif choice == "tutorial":
-            TutorialMatch(navigation).start()
+            tutorial_menu(navigation)
         elif choice == "language":
             language_menu()

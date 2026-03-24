@@ -25,17 +25,17 @@ def center(text: str, offset: int=0) -> str:
     return leading + (" " * offset) + pad + stripped
 
 
-def center_in(text: str, width: int) -> str:
+def center_in(text: str, width: int, fill: str = " ") -> str:
     """Return `text` padded symmetrically to fill `width` visible chars.
 
     Unlike ``center()``, which only adds left padding to align in the
     terminal, this pads both sides — intended for centering content inside
-    a fixed-width box column.
+    a fixed-width box column. ``fill`` controls the padding character.
     """
     pad_total = max(0, width - ansi_len(text))
     pad_l = pad_total // 2
     pad_r = pad_total - pad_l
-    return ' ' * pad_l + text + ' ' * pad_r
+    return fill * pad_l + text + fill * pad_r
 
 
 def out(text: str, end: str = "\n") -> None:
