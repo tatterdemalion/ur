@@ -4,13 +4,43 @@ from typing import Callable, Optional
 
 from ur.ai.bots import Bot
 from ur.cli.tui.board import Board
-from ur.cli.tui.constants import C_BOARD, C_BOLD_TEXT, C_ITALIC, C_P1, C_P1_ROSETTA, C_P2, C_P2_ROSETTA, C_RESET, C_ROSETTA, C_TUTORIAL, TEMPLATE
+from ur.cli.tui.constants import ANSI_ESCAPE, C_BOARD, C_BOLD_TEXT, C_ITALIC, C_P1, C_P1_ROSETTA, C_P2, C_P2_ROSETTA, C_RESET, C_ROSETTA, C_TUTORIAL, TEMPLATE
 from ur.cli.tui.i18n import t
 from ur.cli.flows.match import Match
-from ur.cli.tui.output import out
+from ur.cli.tui.output import center, out
 from ur.cli.tui.utils import GameUtils
 from ur.game.engine import Action, ActionType, Engine, Move, Player
 from ur.game.rules import FINISH, P1_PATH, P2_PATH, ROSETTAS
+
+
+BOX_INNER_WIDTH = 54  # matches logo width — chars between ╔ and ╗
+
+
+def _ansi_len(s: str) -> int:
+    return len(ANSI_ESCAPE.sub('', s))
+
+
+def _ansi_wordwrap(text: str, width: int) -> list[str]:
+    """Split on explicit newlines, then word-wrap each paragraph to fit width."""
+    result = []
+    for para in text.split('\n'):
+        if not para:
+            result.append('')
+            continue
+        words = para.split(' ')
+        cur, cur_len = '', 0
+        for word in words:
+            wl = _ansi_len(word)
+            if cur_len == 0:
+                cur, cur_len = word, wl
+            elif cur_len + 1 + wl <= width:
+                cur += ' ' + word
+                cur_len += 1 + wl
+            else:
+                result.append(cur)
+                cur, cur_len = word, wl
+        result.append(cur)
+    return result
 
 
 def _make_snapshot(p1_pieces: dict[int, int], p2_pieces: dict[int, int]) -> dict:
@@ -90,13 +120,46 @@ class TutorialMatch(Match):
     # Helpers
     # ------------------------------------------------------------------
 
+    def _print_box(self, text: str, title: str = None):
+        inner = BOX_INNER_WIDTH
+        content_w = inner - 2  # 1 space padding each side
+
+        top = f"{C_BOARD}╔{'═' * inner}╗{C_RESET}"
+        bot = f"{C_BOARD}╚{'═' * inner}╝{C_RESET}"
+        sep = f"{C_BOARD}╠{'═' * inner}╣{C_RESET}"
+
+        out(f"\n{center(top)}")
+
+        if title:
+            tvis = _ansi_len(title)
+            pad_total = inner - tvis
+            pad_l = pad_total // 2
+            pad_r = pad_total - pad_l
+            out(center(
+                f"{C_BOARD}║{' ' * pad_l}{C_BOLD_TEXT}{title}{C_RESET}"
+                f"{C_BOARD}{' ' * pad_r}║{C_RESET}"
+            ))
+            out(center(sep))
+
+        for line in _ansi_wordwrap(text, content_w):
+            if not line:
+                out(center(f"{C_BOARD}║{' ' * inner}║{C_RESET}"))
+            else:
+                pad_r = content_w - _ansi_len(line)
+                out(center(
+                    f"{C_BOARD}║{C_TUTORIAL} {line}{C_RESET}{C_TUTORIAL}"
+                    f"{' ' * pad_r} {C_BOARD}║{C_RESET}"
+                ))
+
+        out(center(bot))
+
     def _narrate(self, key: str, **kwargs):
         text = t(key, **kwargs)
-        out(f"\n{C_TUTORIAL}{text}{C_RESET}\n")
+        self._print_box(text)
 
     def _pause(self):
-        text = t("tuto.press_enter", bold=C_BOLD_TEXT, reset=C_TUTORIAL)
-        input(f"{C_TUTORIAL}{text}{C_RESET}")
+        prompt = t("tuto.press_enter", bold=C_BOLD_TEXT, reset=C_TUTORIAL)
+        input(center(f"\n{C_TUTORIAL}{prompt}{C_RESET}"))
 
     def _get_confirmed_move(self, move: Move) -> bool:
         """Prompt that accepts any input and confirms once Enter is pressed.
@@ -104,7 +167,8 @@ class TutorialMatch(Match):
         color = C_P1_ROSETTA if move.target_coord in ROSETTAS else C_P1
         piece_sym = f"{color}{chr(9312 + move.piece.identifier - 1)}{C_RESET}"
         while True:
-            raw = input(f"{C_TUTORIAL}[ Enter for {piece_sym}{C_TUTORIAL} ]:{C_RESET} ").strip()
+            prompt = center(f"\n{C_TUTORIAL}[ Enter for {piece_sym}{C_TUTORIAL} ]{C_RESET}{C_TUTORIAL}: {C_RESET}")
+            raw = input(prompt).strip()
             if not raw:
                 return True
             if self.navigation.check_global_commands(raw):
@@ -124,7 +188,13 @@ class TutorialMatch(Match):
         def draw_state(current_cells: dict, p1_text: str = "", p2_text: str = ""):
             self.navigation.clear()
             title = t("tuto.board_title")
-            out(f"{C_BOLD_TEXT}=== {title} ==={C_RESET}\n")
+            tvis = len(title)
+            pad_total = BOX_INNER_WIDTH - tvis
+            pad_l = pad_total // 2
+            pad_r = pad_total - pad_l
+            out(center(f"{C_BOARD}╔{'═' * BOX_INNER_WIDTH}╗{C_RESET}"))
+            out(center(f"{C_BOARD}║{' ' * pad_l}{C_BOLD_TEXT}{title}{C_RESET}{C_BOARD}{' ' * pad_r}║{C_RESET}"))
+            out(center(f"{C_BOARD}╚{'═' * BOX_INNER_WIDTH}╝{C_RESET}\n"))
 
             # Wrap the visual character (arrow, space, or flower) in spaces to fit the 3-char slot
             formatted_cells = {k: f" {v} " for k, v in current_cells.items()}
@@ -196,7 +266,7 @@ class TutorialMatch(Match):
     def _show_dice_explainer(self):
         """Teaches the dice mechanic by demoing all five possible outcomes, then continues."""
         self.navigation.clear()
-        out(f"\n{C_TUTORIAL}{t('tuto.dice_explainer')}{C_RESET}\n")
+        self._print_box(t('tuto.dice_explainer'))
         self._pause()
 
         for demo_roll in range(5):
@@ -287,7 +357,10 @@ class TutorialMatch(Match):
                 p2=C_P2, p2_rosetta=C_P2_ROSETTA, p2_name=self.p2.name,
                 rosetta=C_ROSETTA, bold=C_BOLD_TEXT, reset=C_RESET + C_TUTORIAL,
             )
-            out(f"\n{C_TUTORIAL}{hint_text}{C_RESET}\n")
+            hint_parts = hint_text.split('\n', 1)
+            hint_title = hint_parts[0]
+            hint_body = hint_parts[1] if len(hint_parts) > 1 else ''
+            self._print_box(hint_body, title=hint_title)
 
             # 5. Get Move & Execute
             if not valid_moves:

@@ -313,100 +313,100 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
     # ── Interactive Tutorial ──────────────────────────────────────────────
     "tuto.intro": {
-        "en": "Welcome to {bold}THE ROYAL GAME OF UR!{reset}\n\nOne of the oldest board games ever discovered.\n\n{bold}The goal:{reset} move all 7 of your pieces off the board before your opponent.",
-        "tr": "{bold}UR'UN KRALIYET OYUNU{reset}'na hoş geldin!\n\nKeşfedilen en eski masa oyunlarından biri.\n\n{bold}Amaç:{reset} 7 taşını rakibinden önce tahtadan çıkar.",
+        "en": "Welcome to {bold}THE ROYAL GAME OF UR{reset}!\n\nOne of the oldest board games ever discovered.\n\n{bold}Goal:{reset} move all 7 pieces off the board\nbefore your opponent does.",
+        "tr": "{bold}UR'UN KRALIYET OYUNU{reset}'na hoş geldin!\n\nKeşfedilen en eski masa oyunlarından biri.\n\n{bold}Amaç:{reset} 7 taşını rakibinden önce\ntahtadan çıkar.",
     },
     "tuto.board_title": {
         "en": "THE BOARD",
         "tr": "TAHTA",
     },
     "tuto.path_p1": {
-        "en": "You will play with numbered pieces in cyan from ({p1}①{reset} to {p1}⑦{reset}).",
-        "tr": "Sen ({p1}①{reset} ile {p1}⑦{reset} arasında) numaralı mavi taşlarla oynayacaksın.",
+        "en": "Your pieces ({p1}①{reset} to {p1}⑦{reset}) are in cyan.",
+        "tr": "Taşların ({p1}①{reset} ile {p1}⑦{reset}) mavi renkte.",
     },
     "tuto.path_p2": {
-        "en": "Your opponent is {p2_name}, she has small red ({p2}●{reset}) dots.",
-        "tr": "Rakibin {p2_name}, onun taşları ise küçük kırmızı ({p2}●{reset}) daireler.",
+        "en": "{p2_name} plays with red ({p2}●{reset}) dots.",
+        "tr": "{p2_name} kırmızı ({p2}●{reset}) taşlarla oynuyor.",
     },
     "tuto.dice_explainer": {
-        "en": "Each turn you flip 4 coins — heads or tails — giving a result between 0 and 4.\n\nEvery outcome is possible — let's see all of them.",
-        "tr": "Her turda 4 para atarsın — yazı veya tura — sonuç 0 ile 4 arasında olur.\n\nHer sonuç mümkün — hepsine bakalım.",
+        "en": "Each turn, flip 4 coins to get a\nresult from 0 to 4.\n\nEvery outcome is possible —\nlet's see all of them.",
+        "tr": "Her turda 4 para at — sonuç\n0 ile 4 arasında olur.\n\nHer sonuç mümkün —\nhepsine bakalım.",
     },
     "tuto.dice_demo_result": {
         "en": "→  {roll}",
         "tr": "→  {roll}",
     },
     "tuto.step1.hint": {
-        "en": "STEP 1 — ENTERING THE BOARD\nYou flipped a {roll}. Move piece {p1}①{reset} from the waiting area onto the board.",
-        "tr": "ADIM 1 — TAHTAYA GİRİŞ\n{roll} attın. {p1}①{reset} taşını bekleme alanından tahtaya taşı.",
+        "en": "STEP 1 — ENTERING THE BOARD\nYou flipped {roll}. Move {p1}①{reset} onto the board.",
+        "tr": "ADIM 1 — TAHTAYA GİRİŞ\n{roll} attın. {p1}①{reset} taşını tahtaya taşı.",
     },
     "tuto.step1": {
         "en": "Piece {piece} is now on the board.",
         "tr": "{piece} taşı artık tahtada.",
     },
     "tuto.step2.hint": {
-        "en": "STEP 2 — OPPONENT'S TURN\n{p2_name} rolled one and she will move one of her piece to square a",
-        "tr": "ADIM 2 — RAKİBİN SIRASI\n{p2_name} bir attı ve taşlarından birini a karesine taşıyacak.",
+        "en": "STEP 2 — OPPONENT'S TURN\n{p2_name} rolls 1 and moves a piece to square a.",
+        "tr": "ADIM 2 — RAKİBİN SIRASI\n{p2_name} 1 attı ve bir taşı a karesine taşıyor.",
     },
     "tuto.step2": {
         "en": "{p2_name} moved a piece onto the board.",
         "tr": "{p2_name} bir taşı tahtaya taşıdı.",
     },
     "tuto.step3.hint": {
-        "en": "STEP 3 — THE ROSETTA\nYou rolled a {roll}. Move piece {p1}①{reset} — it will land on a {rosetta}✿ Rosetta{reset}.\nRosettas grant an extra turn and protect your piece from capture!",
-        "tr": "ADIM 3 — ROZET\n{roll} attın. {p1}①{reset} taşını hareket ettir — {rosetta}✿ Rozet{reset}'e inecek.\nRozetler ekstra tur kazandırır ve taşını ele geçirilmekten korur!",
+        "en": "STEP 3 — THE ROSETTA\nYou rolled {roll}. Move {p1}①{reset} —\nit lands on a {rosetta}✿ Rosetta{reset}!\nRosettas give an extra turn and\nprotect your piece from capture.",
+        "tr": "ADIM 3 — ROZET\n{roll} attın. {p1}①{reset} taşını hareket ettir —\n{rosetta}✿ Rozet{reset}'e inecek!\nRozetler ekstra tur kazandırır ve\ntaşını ele geçirilmekten korur.",
     },
     "tuto.step3": {
-        "en": "You landed on a {rosetta}✿ Rosetta{reset} — you get another turn!",
-        "tr": "{rosetta}✿ Rozet{reset}'e indin — bir tur daha kazandın!",
+        "en": "You landed on {rosetta}✿ Rosetta{reset} — extra turn!",
+        "tr": "{rosetta}✿ Rozet{reset}'e indin — bir tur daha!",
     },
     "tuto.step4.hint": {
-        "en": "STEP 4 — EXTRA TURN\nThe Rosetta grants you another roll. You rolled {roll}.\nYou have multiple pieces that can move — type {bold}help{reset} to see your options, then pick a piece.",
-        "tr": "ADIM 4 — EKSTRİ TUR\nRozet sana bir tur daha veriyor. {roll} attın.\nHareket ettirebileceğin birden fazla taşın var — seçeneklerini görmek için {bold}help{reset} yaz, sonra bir taş seç.",
+        "en": "STEP 4 — EXTRA TURN\nThe Rosetta gives another roll.\nYou rolled {roll}. Pick any piece!\nType {bold}help{reset} to see your options.",
+        "tr": "ADIM 4 — EKSTRİ TUR\nRozet sana bir tur daha veriyor.\n{roll} attın. İstediğin taşı seç!\nSeçenekler için {bold}help{reset} yaz.",
     },
     "tuto.step4": {
-        "en": "Piece {piece} advanced. The extra turn is done.",
+        "en": "Piece {piece} advanced. Extra turn done.",
         "tr": "{piece} taşı ilerledi. Ekstra tur bitti.",
     },
     "tuto.scene5": {
-        "en": "Nice work so far. To show you capturing, let's fast-forward to a position where your piece can take one of {p2_name}'s.",
-        "tr": "Güzel gidiyor. Ele geçirmeyi göstermek için, taşının {p2_name}'ninkini alabileceği bir konuma atlayalım.",
+        "en": "Nice work! Let's skip ahead to show\ncapturing — your piece can take\none of {p2_name}'s.",
+        "tr": "Güzel! Ele geçirmeyi göstermek için\nilerleyelim — taşın {p2_name}'ninkini\nalabilecek.",
     },
     "tuto.scene6": {
-        "en": "Now let's look at the safe haven rule. We'll set up a position where {p2_name} has a piece on the central {rosetta}✿ Rosetta{reset}.",
-        "tr": "Şimdi güvenli liman kuralına bakalım. {p2_name}'nin merkezi {rosetta}✿ Rozet{reset}'te taşı olduğu bir konum kuralım.",
+        "en": "Now: the safe haven rule.\n{p2_name} has a piece on the\ncentral {rosetta}✿ Rosetta{reset}.",
+        "tr": "Şimdi: güvenli liman kuralı.\n{p2_name}'nin merkezi {rosetta}✿ Rozet{reset}'te\nbir taşı var.",
     },
     "tuto.scene7": {
-        "en": "Last rule: scoring. Let's place your piece one roll away from the finish.",
-        "tr": "Son kural: puan kazanma. Taşını bitişe bir hamle kala koyalım.",
+        "en": "Last rule: scoring!\nYour piece is one roll from the finish.",
+        "tr": "Son kural: puan kazanma!\nTaşın bitişe bir hamle uzakta.",
     },
     "tuto.step5.hint": {
-        "en": "STEP 5 — CAPTURING\nYou rolled {roll}. Move piece {p1}①{reset} — it will land on {p2_name}'s piece in the shared zone!\nCapturing sends their piece back to the waiting area.\n\n(You have other pieces that could move, but for this demo only {p1}①{reset} is shown.)",
-        "tr": "ADIM 5 — ELE GEÇİRME\n{roll} attın. {p1}①{reset} taşını hareket ettir — ortak bölgede {p2_name}'nin taşına inecek!\nEle geçirmek rakibin taşını bekleme alanına geri gönderir.\n\n(Hareket ettirebileceğin başka taşlar da var, ancak bu demo için yalnızca {p1}①{reset} gösteriliyor.)",
+        "en": "STEP 5 — CAPTURING\nYou rolled {roll}. Move {p1}①{reset} to\ncapture {p2_name}'s piece!\nThis sends their piece back to start.",
+        "tr": "ADIM 5 — ELE GEÇİRME\n{roll} attın. {p1}①{reset} taşını hareket ettir —\n{p2_name}'nin taşını ele geçirecek!\nEle geçirilen taş başa döner.",
     },
     "tuto.step5": {
-        "en": "You captured {p2_name}'s piece! It is sent back to the waiting area.",
-        "tr": "{p2_name}'nin taşını ele geçirdin! Bekleme alanına geri döndü.",
+        "en": "You captured {p2_name}'s piece!\nSent back to the waiting area.",
+        "tr": "{p2_name}'nin taşını ele geçirdin!\nBekleme alanına geri döndü.",
     },
     "tuto.step6.hint": {
-        "en": "STEP 6 — SAFE HAVEN\nSee {p2_name}'s {p2_rosetta}●{reset} brighter piece on the central {rosetta}✿ Rosetta{reset}? The brighter color means it is on a Rosetta and completely safe — it cannot be captured.\nYour piece {p1}①{reset} is right next to it but cannot land there. You rolled {roll} — only your other piece can move.",
-        "tr": "ADIM 6 — GÜVENLİ LİMAN\n{p2_name}'nin merkezi {rosetta}✿ Rozet{reset}'teki {p2_rosetta}●{reset} parlak taşını görüyor musun? Parlak renk, Rozet'te olduğu ve tamamen güvende olduğu anlamına gelir — ele geçirilemez.\n{p1}①{reset} taşın tam yanında ama oraya inemez. {roll} attın — sadece diğer taşın hareket edebilir.",
+        "en": "STEP 6 — SAFE HAVEN\n{p2_name}'s {p2_rosetta}●{reset} sits on the central {rosetta}✿ Rosetta{reset}.\nA piece on a Rosetta is safe —\nit cannot be captured.\nYou rolled {roll}. {p1}①{reset} is blocked.\nOnly your other piece can move.",
+        "tr": "ADIM 6 — GÜVENLİ LİMAN\n{p2_name}'nin {p2_rosetta}●{reset} taşı merkezi {rosetta}✿ Rozet{reset}'te.\nRozet'teki bir taş güvende —\nele geçirilemez.\n{roll} attın. {p1}①{reset} engellenmiş.\nSadece diğer taşın hareket edebilir.",
     },
     "tuto.step6": {
-        "en": "Piece {piece} moved. Piece {p1}①{reset} was blocked — you cannot capture a piece sitting on the central {rosetta}✿ Rosetta{reset}.",
-        "tr": "{piece} taşı hareket etti. {p1}①{reset} taşı engellendi — merkezi {rosetta}✿ Rozet{reset}'teki bir taşı ele geçiremezsin.",
+        "en": "{piece} moved. {p1}①{reset} was blocked.\nCannot capture on a {rosetta}✿ Rosetta{reset}.",
+        "tr": "{piece} hareket etti. {p1}①{reset} engellendi.\n{rosetta}✿ Rozet{reset}'teki taş ele geçirilemez.",
     },
     "tuto.step7.hint": {
-        "en": "STEP 7 — SCORING\nTo score, a piece must land exactly on the finish with the right roll. No overshooting.\nYou rolled {roll}. Move piece {p1}①{reset} off the board!",
-        "tr": "ADIM 7 — PUAN KAZANMA\nPuan kazanmak için taşın doğru zarla tam olarak bitişe inmesi gerekir. Daha yüksek bir zarla geçemezsin.\n{roll} attın. {p1}①{reset} taşını tahtadan çıkar!",
+        "en": "STEP 7 — SCORING\nTo score, land exactly on the finish.\nRolling too high won't count.\nYou rolled {roll}. Move {p1}①{reset} off!",
+        "tr": "ADIM 7 — PUAN KAZANMA\nPuan için tam olarak bitişe inmek gerekir.\nFazla yüksek atmak geçmez.\n{roll} attın. {p1}①{reset} taşını çıkar!",
     },
     "tuto.step7": {
-        "en": "Piece {piece} scored!",
+        "en": "Piece {piece} scored a point!",
         "tr": "{piece} taşı puan yaptı!",
     },
     "tuto.outro": {
-        "en": "Well played! That is everything you need to know.\nThe first player to move all 7 pieces off the board wins.",
-        "tr": "Güzel oynadın! Bilmen gereken her şey bu kadar.\nTüm 7 taşını tahtadan ilk çıkaran kazanır.",
+        "en": "Well played! That's all you need to know.\n\nFirst player to score all 7 pieces wins.",
+        "tr": "Güzel oynadın! Bilmen gereken her şey bu.\n\nTüm 7 taşını ilk çıkaran kazanır.",
     },
     "tuto.press_enter": {
         "en": "Press {bold}Enter{reset} to continue...",
