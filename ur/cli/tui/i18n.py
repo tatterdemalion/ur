@@ -314,7 +314,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     # ── Interactive Tutorial ──────────────────────────────────────────────
     "tuto.intro": {
         "en": "Welcome to {bold}THE ROYAL GAME OF UR{reset}!\n\nOne of the oldest board games ever discovered.\n\n{bold}Goal:{reset} move all 7 pieces off the board\nbefore your opponent does.",
-        "tr": "{bold}UR'UN KRALIYET OYUNU{reset}'na hoş geldin!\n\nKeşfedilen en eski masa oyunlarından biri.\n\n{bold}Amaç:{reset} 7 taşını rakibinden önce\ntahtadan çıkar.",
+        "tr": "{bold}UR'UN KRALİYET OYUNU{reset}'na hoş geldin!\n\nKeşfedilen en eski masa oyunlarından biri.\n\n{bold}Amaç:{reset} 7 taşını rakibinden önce\ntahtadan çıkar.",
     },
     "tuto.board_title": {
         "en": "THE BOARD",
@@ -329,8 +329,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tr": "{p2_name} kırmızı ({p2}●{reset}) taşlarla oynuyor.",
     },
     "tuto.dice_explainer": {
-        "en": "Each turn, flip 4 coins to get a\nresult from 0 to 4.\n\nEvery outcome is possible —\nlet's see all of them.",
-        "tr": "Her turda 4 para at — sonuç\n0 ile 4 arasında olur.\n\nHer sonuç mümkün —\nhepsine bakalım.",
+        "en": "Each turn, flip 4 coins to get a\nresult from 0 to 4.\nlet's see all of them.",
+        "tr": "Her turda 4 yazı-tura atarsın.\nZarlara bakalım.",
     },
     "tuto.dice_demo_result": {
         "en": "→  {roll}",

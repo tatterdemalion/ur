@@ -130,7 +130,8 @@ class TutorialMatch(Match):
             title = t("tuto.board_title")
             out(center(f"{C_BOARD}╔{'═' * BOX_INNER_WIDTH}╗{C_RESET}"))
             out(center(f"{C_BOARD}║{center_in(f'{C_BOLD_TEXT}{title}{C_RESET}', BOX_INNER_WIDTH)}{C_BOARD}║{C_RESET}"))
-            out(center(f"{C_BOARD}╚{'═' * BOX_INNER_WIDTH}╝{C_RESET}\n"))
+            out(center(f"{C_BOARD}╚{'═' * BOX_INNER_WIDTH}╝{C_RESET}"))
+            out("")
 
             # Wrap the visual character (arrow, space, or flower) in spaces to fit the 3-char slot
             formatted_cells = {k: f" {v} " for k, v in current_cells.items()}
@@ -207,11 +208,10 @@ class TutorialMatch(Match):
 
         for demo_roll in range(5):
             GameUtils.animate_dice(C_P1, demo_roll)
-            out(f"{C_TUTORIAL}{t('tuto.dice_demo_result', roll=str(demo_roll))}{C_RESET}\n")
+            out(center(f"{C_TUTORIAL}{t('tuto.dice_demo_result', roll=str(demo_roll))}{C_RESET}\n"))
             time.sleep(1.2)
 
-        time.sleep(1)
-        self.navigation.clear()
+        self._pause()
 
     def _play_bot_turns(self):
         """Play out any extra bot turns that follow a human rosetta landing."""
