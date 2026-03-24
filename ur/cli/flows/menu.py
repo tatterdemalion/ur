@@ -4,7 +4,7 @@ from typing import Optional
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
 from ur.cli.tui.constants import C_BOLD_TEXT, C_RESET, SCREEN_WIDTH
 from ur.cli.tui.i18n import set_language, t
-from ur.cli.flows.match import ClientMatch, HostMatch, LocalMatch
+from ur.cli.flows.match import ClientMatch, HostMatch, LocalMatch, WebHostMatch
 from ur.cli.flows.tutorial import TutorialMatch, TUTORIAL_STEPS
 from ur.cli.tui.widgets import Menu, Navigation
 from ur.cli.tui.output import out
@@ -42,7 +42,10 @@ def multiplayer_game_menu() -> Optional[SaveFile]:
     return _game_selection_menu(
         title=t("menu.multi_player"),
         saves=saves,
-        extra_items=[(t("menu.join"), "join_game")]
+        extra_items=[
+            (t("menu.join"), "join_game"),
+            (t("menu.web_game"), "web_game"),
+        ]
     )
 
 
@@ -123,10 +126,11 @@ def main_menu():
                 main_menu()
 
         elif choice == "multi_player":
-            match = HostMatch(navigation)
             choice = multiplayer_game_menu()
             if choice == "new_game":
-                match.start()
+                HostMatch(navigation).start()
+            elif choice == "web_game":
+                WebHostMatch(navigation).start()
             elif choice == "join_game":
                 Navigation.clear()
                 out(f"{C_BOLD_TEXT}=== {t('join.title')} ==={C_RESET}\n")
@@ -145,8 +149,7 @@ def main_menu():
                     Session.save({"last_ip": host_ip})
                     ClientMatch(host_ip, navigation).start()
             elif isinstance(choice, SaveFile):
-                save = choice
-                match.load_game(save)
+                HostMatch(navigation).load_game(choice)
             else:
                 main_menu()
 

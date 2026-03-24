@@ -67,6 +67,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Join Game",
         "tr": "Oyuna Katıl",
     },
+    "menu.web_game": {
+        "en": "Host for Browser",
+        "tr": "Tarayıcı için Host",
+    },
     "menu.tutorial": {
         "en": "How to Play",
         "tr": "Nasıl Oynanır",
