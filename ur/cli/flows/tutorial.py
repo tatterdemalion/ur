@@ -4,7 +4,7 @@ from typing import Callable, Optional
 
 from ur.ai.bots import Bot
 from ur.cli.tui.board import Board
-from ur.cli.tui.constants import C_BOARD, C_BOLD_TEXT, C_ITALIC, C_P1, C_P2, C_RESET, C_ROSETTA, C_TUTORIAL, TEMPLATE
+from ur.cli.tui.constants import C_BOARD, C_BOLD_TEXT, C_ITALIC, C_P1, C_P1_ROSETTA, C_P2, C_P2_ROSETTA, C_RESET, C_ROSETTA, C_TUTORIAL, TEMPLATE
 from ur.cli.tui.i18n import t
 from ur.cli.flows.match import Match
 from ur.cli.tui.output import out
@@ -101,7 +101,8 @@ class TutorialMatch(Match):
     def _get_confirmed_move(self, move: Move) -> bool:
         """Prompt that accepts any input and confirms once Enter is pressed.
         Returns False if the user navigated away (menu/quit), True otherwise."""
-        piece_sym = f"{C_P1}{chr(9312 + move.piece.identifier - 1)}{C_RESET}"
+        color = C_P1_ROSETTA if move.target_coord in ROSETTAS else C_P1
+        piece_sym = f"{color}{chr(9312 + move.piece.identifier - 1)}{C_RESET}"
         while True:
             raw = input(f"{C_TUTORIAL}[ Enter for {piece_sym}{C_TUTORIAL} ]:{C_RESET} ").strip()
             if not raw:
@@ -147,15 +148,15 @@ class TutorialMatch(Match):
         # 2. Animate P1 Path (Bottom row -> Middle row -> Exit)
         p1_keys =   ['r', 'q', 'p', 'o', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 't', 's']
         p1_arrows = ['←', '←', '←', '↑', '→', '→', '→', '→', '→', '→', '→', '↓', '←', '↓']
-        p1_piece = f"{C_P1}①{C_RESET}"
 
         for i in range(len(p1_keys)):
             # Turn the previous square into an arrow
             if i > 0:
                 cells[p1_keys[i-1]] = f"{C_P1}{p1_arrows[i-1]}{C_RESET}"
 
-            # Put the piece on the current square
-            cells[p1_keys[i]] = p1_piece
+            # Use rosetta color when the piece lands on a rosetta cell
+            color = C_P1_ROSETTA if p1_keys[i] in rosettas else C_P1
+            cells[p1_keys[i]] = f"{color}①{C_RESET}"
             draw_state(cells, p1_text=p1_msg)
             time.sleep(0.15)  # Fast, smooth tracking
 
@@ -176,13 +177,13 @@ class TutorialMatch(Match):
         # 4. Animate P2 Path (Top row -> Middle row -> Exit)
         p2_keys =   ['d', 'c', 'b', 'a', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'f', 'e']
         p2_arrows = ['←', '←', '←', '↓', '→', '→', '→', '→', '→', '→', '→', '↑', '←', '↑']
-        p2_piece = f"{C_P2}●{C_RESET}"
 
         for i in range(len(p2_keys)):
             if i > 0:
                 cells[p2_keys[i-1]] = f"{C_P2}{p2_arrows[i-1]}{C_RESET}"
 
-            cells[p2_keys[i]] = p2_piece
+            color = C_P2_ROSETTA if p2_keys[i] in rosettas else C_P2
+            cells[p2_keys[i]] = f"{color}●{C_RESET}"
             draw_state(cells, p1_text=p1_msg, p2_text=p2_msg)
             time.sleep(0.15)
 
@@ -199,7 +200,7 @@ class TutorialMatch(Match):
         self._pause()
 
         for demo_roll in range(5):
-            GameUtils.animate_dice("", C_P1, demo_roll)
+            GameUtils.animate_dice(C_P1, demo_roll)
             out(f"{C_TUTORIAL}{t('tuto.dice_demo_result', roll=str(demo_roll))}{C_RESET}\n")
             time.sleep(1.2)
 
@@ -248,7 +249,8 @@ class TutorialMatch(Match):
             if step_data.scene_narrate_key:
                 self._narrate(
                     step_data.scene_narrate_key,
-                    p1=C_P1, p2=C_P2, p2_name=self.p2.name,
+                    p1=C_P1, p1_rosetta=C_P1_ROSETTA,
+                    p2=C_P2, p2_rosetta=C_P2_ROSETTA, p2_name=self.p2.name,
                     rosetta=C_ROSETTA, bold=C_BOLD_TEXT, reset=C_RESET + C_TUTORIAL,
                 )
                 self._pause()
@@ -281,7 +283,8 @@ class TutorialMatch(Match):
             roll_str = f"{dots} {C_ITALIC}({roll}){C_RESET + C_TUTORIAL}"
             hint_text = t(
                 step_data.narrate_key + ".hint",
-                roll=roll_str, p1=C_P1, p2=C_P2, p2_name=self.p2.name,
+                roll=roll_str, p1=C_P1, p1_rosetta=C_P1_ROSETTA,
+                p2=C_P2, p2_rosetta=C_P2_ROSETTA, p2_name=self.p2.name,
                 rosetta=C_ROSETTA, bold=C_BOLD_TEXT, reset=C_RESET + C_TUTORIAL,
             )
             out(f"\n{C_TUTORIAL}{hint_text}{C_RESET}\n")
@@ -320,12 +323,14 @@ class TutorialMatch(Match):
                 chosen_move = self._bot.choose_move(state, valid_moves, self.engine.current_player)
                 time.sleep(1.2)
 
-            piece_sym = f"{C_P1}{chr(9312 + chosen_move.piece.identifier - 1)}{C_RESET + C_TUTORIAL}"
+            piece_color = C_P1_ROSETTA if chosen_move.target_coord in ROSETTAS else C_P1
+            piece_sym = f"{piece_color}{chr(9312 + chosen_move.piece.identifier - 1)}{C_RESET + C_TUTORIAL}"
             self.engine.execute_move(chosen_move, roll)
             self.update_display(show_labels=True)
             self._narrate(
                 step_data.narrate_key,
-                piece=piece_sym, p1=C_P1, p2=C_P2, p2_name=self.p2.name,
+                piece=piece_sym, p1=C_P1, p1_rosetta=C_P1_ROSETTA,
+                p2=C_P2, p2_rosetta=C_P2_ROSETTA, p2_name=self.p2.name,
                 rosetta=C_ROSETTA, bold=C_BOLD_TEXT, reset=C_RESET + C_TUTORIAL,
             )
             self._pause()

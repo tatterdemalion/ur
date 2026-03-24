@@ -10,6 +10,8 @@ from ur.cli.tui.constants import (
     C_P2,
     C_RESET,
     C_ROSETTA,
+    C_P1_ROSETTA,
+    C_P2_ROSETTA,
     C_ITALIC,
     MISSING_CELLS,
     NUM_CIRCLES,
@@ -129,12 +131,12 @@ class Board:
 
                 for piece in top.pieces:
                     if piece.is_available and piece.coord == coord:
-                        content = f"{C_ROSETTA}●{C_BOARD}" if on_rosetta else f"{C_P2}●{C_BOARD}"
+                        content = f"{C_P2_ROSETTA}●{C_BOARD}" if on_rosetta else f"{C_P2}●{C_BOARD}"
 
                 for piece in bottom.pieces:
                     if piece.is_available and piece.coord == coord:
                         content = (
-                            f"{C_ROSETTA}{self._numbered_piece(piece)}{C_BOARD}"
+                            f"{C_P1_ROSETTA}{self._numbered_piece(piece)}{C_BOARD}"
                             if on_rosetta
                             else f"{C_P1}{self._numbered_piece(piece)}{C_BOARD}"
                         )

@@ -393,8 +393,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tr": "{p2_name}'nin taşını ele geçirdin! Bekleme alanına geri döndü.",
     },
     "tuto.step6.hint": {
-        "en": "STEP 6 — SAFE HAVEN\nSee {p2_name}'s {rosetta}●{reset} yellow piece on the central {rosetta}✿ Rosetta{reset}? Yellow means it is on a Rosetta and completely safe — it cannot be captured.\nYour piece {p1}①{reset} is right next to it but cannot land there. You rolled {roll} — only your other piece can move.",
-        "tr": "ADIM 6 — GÜVENLİ LİMAN\n{p2_name}'nin merkezi {rosetta}✿ Rozet{reset}'teki {rosetta}●{reset} sarı taşını görüyor musun? Sarı renk, Rozet'te olduğu ve tamamen güvende olduğu anlamına gelir — ele geçirilemez.\n{p1}①{reset} taşın tam yanında ama oraya inemez. {roll} attın — sadece diğer taşın hareket edebilir.",
+        "en": "STEP 6 — SAFE HAVEN\nSee {p2_name}'s {p2_rosetta}●{reset} brighter piece on the central {rosetta}✿ Rosetta{reset}? The brighter color means it is on a Rosetta and completely safe — it cannot be captured.\nYour piece {p1}①{reset} is right next to it but cannot land there. You rolled {roll} — only your other piece can move.",
+        "tr": "ADIM 6 — GÜVENLİ LİMAN\n{p2_name}'nin merkezi {rosetta}✿ Rozet{reset}'teki {p2_rosetta}●{reset} parlak taşını görüyor musun? Parlak renk, Rozet'te olduğu ve tamamen güvende olduğu anlamına gelir — ele geçirilemez.\n{p1}①{reset} taşın tam yanında ama oraya inemez. {roll} attın — sadece diğer taşın hareket edebilir.",
     },
     "tuto.step6": {
         "en": "Piece {piece} moved. Piece {p1}①{reset} was blocked — you cannot capture a piece sitting on the central {rosetta}✿ Rosetta{reset}.",
