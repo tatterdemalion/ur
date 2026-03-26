@@ -1,4 +1,4 @@
-.PHONY: install test lint format simulate play tutorial tuto
+.PHONY: install test lint format simulate play tutorial tuto poc3 poc3-step
 
 PYTHON = .venv/bin/python
 
@@ -24,6 +24,12 @@ watch:
 
 play:
 	$(PYTHON) -m ur.play
+
+poc3:
+	$(PYTHON) -m ur.poc.play3
+
+poc3-step:
+	STEP=1 $(PYTHON) -m ur.poc.play3
 
 # Jump straight to a tutorial step: make tuto STEP=3
 tuto:
