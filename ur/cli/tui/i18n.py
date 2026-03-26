@@ -67,6 +67,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Join Game",
         "tr": "Oyuna Katıl",
     },
+"menu.online": {
+        "en": "Play Online",
+        "tr": "Online Oyna",
+    },
     "menu.tutorial": {
         "en": "How to Play",
         "tr": "Nasıl Oynanır",
@@ -481,6 +485,55 @@ _STRINGS: dict[str, dict[str, str]] = {
     "player.opponent": {
         "en": "Opponent",
         "tr": "Rakip",
+    },
+    # ── Online play ───────────────────────────────────────────────────────
+    "online.title": {
+        "en": "PLAY ONLINE",
+        "tr": "ONLİNE OYNA",
+    },
+    "online.connecting": {
+        "en": "Connecting to {host}:{port}…",
+        "tr": "{host}:{port} adresine bağlanılıyor…",
+    },
+    "online.waiting": {
+        "en": "Waiting for an opponent… (Ctrl+C to cancel)",
+        "tr": "Rakip bekleniyor… (iptal için Ctrl+C)",
+    },
+    "online.matched": {
+        "en": "Opponent found! Game starting…",
+        "tr": "Rakip bulundu! Oyun başlıyor…",
+    },
+    "online.match_error": {
+        "en": "Matchmaking failed.",
+        "tr": "Eşleşme başarısız.",
+    },
+    "online.choose_game": {
+        "en": "ONLINE LOBBY",
+        "tr": "ONLİNE LOBİ",
+    },
+    "online.create_game": {
+        "en": "Create New Game",
+        "tr": "Yeni Oyun Oluştur",
+    },
+    "online.enter_name": {
+        "en": "Your name [Player]: ",
+        "tr": "Adınız [Oyuncu]: ",
+    },
+    "online.enter_name_last": {
+        "en": "Your name [{name}]: ",
+        "tr": "Adınız [{name}]: ",
+    },
+    "online.color_title": {
+        "en": "CHOOSE YOUR COLOR",
+        "tr": "RENGİNİZİ SEÇİN",
+    },
+    "online.enter_host": {
+        "en": "Server address [localhost]: ",
+        "tr": "Sunucu adresi [localhost]: ",
+    },
+    "online.enter_host_last": {
+        "en": "Server address [{host}]: ",
+        "tr": "Sunucu adresi [{host}]: ",
     },
 }
 
