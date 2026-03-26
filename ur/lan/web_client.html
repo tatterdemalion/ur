@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#f0ece4">
   <title>The Royal Game of Ur</title>
   <style>
     :root {
@@ -30,19 +33,26 @@
       --c-shadow: rgba(0,140,140,.4);
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
 
     body {
       background: var(--bg);
       color: var(--text);
       font-family: 'Courier New', monospace;
-      min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 1.4rem;
       padding: 1.5rem 1rem;
+      overscroll-behavior-y: none;
+      padding-left:  max(1rem, env(safe-area-inset-left));
+      padding-right: max(1rem, env(safe-area-inset-right));
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
     /* ── Title ─────────────────────────────────────────── */
@@ -119,6 +129,7 @@
       justify-content: center;
       position: relative;
       user-select: none;
+      touch-action: manipulation;
       transition: background .12s, box-shadow .12s;
     }
     .cell.rosetta {
@@ -213,6 +224,7 @@
       width: 16px; height: 16px;
       border-radius: 50%;
       cursor: default;
+      touch-action: manipulation;
       transition: transform .1s, box-shadow .1s;
       flex-shrink: 0;
     }
@@ -277,6 +289,48 @@
     .win-text  { color: var(--gold); }
     .lose-text { color: var(--muted); }
     #gameover small { color: var(--dim); font-size: .8rem; letter-spacing: .12em; }
+
+    /* ── Mobile ────────────────────────────────────────── */
+    @media (max-width: 540px) {
+      body { padding: .75rem 0; gap: .75rem; justify-content: flex-start; }
+
+      .wrap { width: 100vw; box-shadow: none; }
+
+      .title { font-size: .7rem; letter-spacing: .3em; }
+
+      .scorebar { padding: .55rem .85rem; }
+      .player .btxt { display: none; }  /* shown in bench strip instead */
+      .player { gap: .4rem; font-size: .85rem; }
+      .player .pts { font-size: .9rem; }
+      .dot-sm { width: 12px; height: 12px; }
+
+      .board { gap: 3px; padding: 7px; }
+      .cell { border-radius: 4px; }
+
+      .bench-strip { padding: .45rem .85rem; min-height: 3rem; }
+      .bench-side { gap: 6px; }
+      .bp { width: 22px; height: 22px; }
+
+      .statusbar {
+        padding: .65rem .85rem;
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+      #status { font-size: .88rem; }
+      #dice   { font-size: .88rem; }
+      #action { font-size: .7rem; }
+    }
+
+    /* ── Tight landscape (phone rotated) ───────────────── */
+    @media (orientation: landscape) and (max-height: 500px) {
+      body { padding: .3rem 0; gap: .3rem; justify-content: center; }
+      .title { display: none; }
+      .scorebar { padding: .3rem .85rem; }
+      .bench-strip { padding: .25rem .85rem; min-height: 2rem; }
+      .bp { width: 14px; height: 14px; }
+      .statusbar { padding: .35rem .85rem; min-height: 2rem; }
+      #status, #dice, #action { font-size: .75rem; }
+    }
   </style>
 </head>
 <body>
@@ -336,7 +390,7 @@
 
     // build board
     const boardEl = document.getElementById('board');
-    for (let r = 0; r < 3; r++) {
+    for (let r = 2; r >= 0; r--) {
       for (let c = 0; c < 8; c++) {
         const k = `${r},${c}`;
         const d = document.createElement('div');

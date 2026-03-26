@@ -21,6 +21,7 @@ from ur.storage.saves import (
     generate_game_name,
     save_game,
 )
+from ur.online.client import OnlineSocket, ONLINE_PORT, DEFAULT_HOST
 
 
 class Match:
@@ -377,3 +378,159 @@ class WebHostMatch(Match):
 
         finally:
             self._server.close()
+
+
+class OnlineMatch(Match):
+    """Connect to a central online server, browse the lobby, and play."""
+
+    def __init__(self, host: str, navigation, name: str = "Player", hex_color: str = "#d42020", ansi_color: str = ""):
+        super().__init__(navigation)
+        url = f"ws://{host}:{ONLINE_PORT}/ws"
+        self._socket = OnlineSocket(url)
+        self._host = host
+        self._name = name
+        self._hex_color = hex_color
+        self._ansi_color = ansi_color or C_P1
+
+    def _wait_for_matched(self) -> dict:
+        """Consume messages until 'matched' arrives (skips lobby updates)."""
+        while True:
+            msg = self._socket.recv()
+            if msg.get("type") == "matched":
+                return msg
+            # else: games/waiting updates while hosting — ignore
+
+    def start(self):
+        from ur.cli.tui.widgets import Menu
+        from ur.cli.tui.constants import SCREEN_WIDTH
+
+        self.print_header(t("online.title"))
+        out(t("online.connecting", host=self._host, port=str(ONLINE_PORT)))
+
+        try:
+            self._socket.connect()
+        except Exception:
+            self.show_message(f"{C_P2}{t('match.failed_connect')}{C_RESET}", 2.0)
+            return
+
+        try:
+            # 1 — receive "lobby" confirmation
+            msg = self._socket.recv()
+            if msg.get("type") != "lobby":
+                self.show_message(f"{C_P2}{t('online.match_error')}{C_RESET}", 2.0)
+                return
+
+            # 2 — receive current games list
+            msg = self._socket.recv()
+            games = msg.get("games", []) if msg.get("type") == "games" else []
+
+            # 3 — show lobby menu
+            self.print_header(t("online.title"))
+            menu = Menu(t("online.choose_game"))
+            menu.add(t("online.create_game"), "create")
+            for g in games:
+                space = " " * max(1, SCREEN_WIDTH - len(g["host_name"]) - len(g["game_name"]) - 2)
+                menu.add(f"{g['host_name']}{space}{g['game_name']}", g["game_id"])
+            menu.add(t("menu.back"), None)
+
+            choice = menu.prompt()
+            if choice is None:
+                return
+
+            # 4 — create or join
+            if choice == "create":
+                self._socket.send({"type": "create", "name": self._name, "color": self._hex_color})
+                msg = self._socket.recv()  # "waiting"
+                if msg.get("type") == "waiting":
+                    self.print_header(t("online.title"))
+                    out(center(t("online.waiting")))
+                matched = self._wait_for_matched()
+            else:
+                self._socket.send({"type": "join", "game_id": choice, "name": self._name, "color": self._hex_color})
+                matched = self._socket.recv()
+                if matched.get("type") == "error":
+                    self.show_message(f"{C_P2}{matched.get('msg', t('online.match_error'))}{C_RESET}", 2.0)
+                    return
+                if matched.get("type") != "matched":
+                    self.show_message(f"{C_P2}{t('online.match_error')}{C_RESET}", 2.0)
+                    return
+
+            # 5 — set up game from matched message
+            player_idx = matched["player_idx"]
+            self.game_name = matched.get("game_name", "")
+            opp_name = matched.get("opponent", {}).get("name", t("player.opponent"))
+
+            self.show_message(t("online.matched"), 1.0)
+
+            if player_idx == 0:
+                self.p1 = Player(0, self._name, P1_PATH)
+                self.p2 = Player(1, opp_name, P2_PATH)
+            else:
+                self.p1 = Player(0, opp_name, P1_PATH)
+                self.p2 = Player(1, self._name, P2_PATH)
+
+            self.engine = Engine(self.p1, self.p2)
+            local_player = self.p1 if player_idx == 0 else self.p2
+            my_color = self._ansi_color
+
+            self.ui = Board(
+                self.engine, self.navigation,
+                local_player=local_player, game_name=self.game_name,
+            )
+            self.update_display()
+
+            def on_rolling(board: dict, roll: int, last_action: dict):
+                self.engine.restore(board)
+                self.engine.last_action = Action(**last_action)
+                self.update_display()
+                GameUtils.animate_dice(C_P2 if player_idx == 0 else C_P1, roll)
+                out(center(t("match.waiting_opponent")))
+
+            def on_state(board: dict, last_action: dict):
+                self.engine.restore(board)
+                self.engine.last_action = Action(**last_action)
+                self.update_display()
+                time.sleep(1.2)
+
+            def on_no_moves(board: dict, last_action: dict):
+                self.engine.restore(board)
+                self.engine.last_action = Action(**last_action)
+                self.update_display()
+                time.sleep(1.2)
+
+            def on_your_turn(board: dict, roll: int, valid_move_ids: list, last_action: dict):
+                self.engine.restore(board)
+                self.engine.last_action = Action(**last_action)
+                self.engine.current_idx = player_idx
+                valid_moves = self.engine.get_valid_moves(roll)
+                valid_moves = [m for m in valid_moves if m.piece.identifier in set(valid_move_ids)]
+                self.update_display()
+                GameUtils.animate_dice(my_color, roll)
+                chosen = GameUtils.get_human_move(valid_moves, self.ui, roll, my_color)
+                if chosen is None:
+                    return None
+                return chosen.piece.identifier
+
+            def on_game_over(board: dict, winner_idx: int, last_action: dict):
+                self.engine.restore(board)
+                self.engine.last_action = Action(**last_action)
+                self.end_game(winner_idx == player_idx)
+
+            protocol = ClientProtocol(
+                client=self._socket,
+                engine=self.engine,
+                on_rolling=on_rolling,
+                on_state=on_state,
+                on_no_moves=on_no_moves,
+                on_your_turn=on_your_turn,
+                on_game_over=on_game_over,
+            )
+            protocol.run()
+
+        except (ConnectionError, OSError, socket.timeout, KeyboardInterrupt):
+            self.handle_disconnect()
+        except Exception:
+            self.handle_disconnect()
+
+        finally:
+            self._socket.close()
