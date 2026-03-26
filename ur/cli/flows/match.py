@@ -13,7 +13,6 @@ from dataclasses import asdict
 
 from ur.game.engine import Action, Engine, Player
 from ur.lan.network import PORT, Client, Server
-from ur.lan.web import WebServer, WEB_PORT, local_ip as web_local_ip
 from ur.game.rules import P1_PATH, P2_PATH
 from ur.storage.saves import (
     SaveFile,
@@ -308,76 +307,6 @@ class ClientMatch(Match):
 
         finally:
             self.client.close()
-
-
-class WebHostMatch(Match):
-    """Host match that serves a browser client via HTTP + Server-Sent Events."""
-
-    def __init__(self, navigation):
-        super().__init__(navigation)
-        self._server = WebServer()
-
-    def start(self):
-        self.game_name = generate_game_name()
-        self._server.start()
-        ip = web_local_ip()
-
-        self.print_header(t("menu.multi_player"))
-        out(f"\n{C_P1}Open in your browser:{C_RESET}")
-        out(f"  http://{ip}:{WEB_PORT}/\n")
-        out(t("host.waiting"))
-
-        try:
-            self._server.wait_for_client()
-            self.show_message(t("host.opponent_connected", ip="browser"), 1.0)
-
-            self.p1 = Player(0, t("player.you"), P1_PATH)
-            self.p2 = Player(1, t("player.opponent"), P2_PATH)
-            self.engine = Engine(self.p1, self.p2)
-            self._server.send({"type": "new_game", "game_name": self.game_name})
-
-            self.ui = Board(self.engine, self.navigation, game_name=self.game_name)
-
-            def on_my_turn(valid_moves: list, roll: int):
-                self.update_display()
-                GameUtils.animate_dice(C_P1, roll)
-                return GameUtils.get_human_move(valid_moves, self.ui, roll, C_P1)
-
-            def on_state(last_action):
-                self.save_state("lan")
-                self.update_display()
-
-            def on_opponent_thinking():
-                out(center(t("match.waiting_opponent")))
-
-            def on_no_moves(roll: int):
-                self.save_state("lan")
-                self.update_display()
-                time.sleep(2.0)
-
-            def on_game_over(winner_idx: int):
-                self.end_game(winner_idx == self.p1.player_idx)
-
-            self.update_display()
-
-            protocol = HostProtocol(
-                server=self._server,
-                engine=self.engine,
-                p1=self.p1,
-                p2=self.p2,
-                on_my_turn=on_my_turn,
-                on_state=on_state,
-                on_opponent_thinking=on_opponent_thinking,
-                on_no_moves=on_no_moves,
-                on_game_over=on_game_over,
-            )
-            protocol.run()
-
-        except (ConnectionError, OSError, KeyboardInterrupt):
-            self.handle_disconnect()
-
-        finally:
-            self._server.close()
 
 
 class OnlineMatch(Match):

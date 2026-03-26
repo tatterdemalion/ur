@@ -4,7 +4,7 @@ from typing import Optional
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
 from ur.cli.tui.constants import C_BOLD_TEXT, C_RESET, SCREEN_WIDTH
 from ur.cli.tui.i18n import set_language, t
-from ur.cli.flows.match import ClientMatch, HostMatch, LocalMatch, WebHostMatch, OnlineMatch
+from ur.cli.flows.match import ClientMatch, HostMatch, LocalMatch, OnlineMatch
 from ur.online.client import DEFAULT_HOST, ONLINE_COLORS
 from ur.cli.flows.tutorial import TutorialMatch, TUTORIAL_STEPS
 from ur.cli.tui.widgets import Menu, Navigation
@@ -45,7 +45,6 @@ def multiplayer_game_menu() -> Optional[SaveFile]:
         saves=saves,
         extra_items=[
             (t("menu.join"), "join_game"),
-            (t("menu.web_game"), "web_game"),
         ]
     )
 
@@ -178,8 +177,6 @@ def main_menu():
             choice = multiplayer_game_menu()
             if choice == "new_game":
                 HostMatch(navigation).start()
-            elif choice == "web_game":
-                WebHostMatch(navigation).start()
             elif choice == "join_game":
                 Navigation.clear()
                 out(f"{C_BOLD_TEXT}=== {t('join.title')} ==={C_RESET}\n")

@@ -67,11 +67,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Join Game",
         "tr": "Oyuna Katıl",
     },
-    "menu.web_game": {
-        "en": "Host for Browser",
-        "tr": "Tarayıcı için Host",
-    },
-    "menu.online": {
+"menu.online": {
         "en": "Play Online",
         "tr": "Online Oyna",
     },
