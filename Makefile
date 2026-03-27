@@ -1,9 +1,12 @@
-.PHONY: install test lint format simulate play tutorial tuto poc3 poc3-step cross cross-step
+.PHONY: install install-online test lint format simulate play tutorial tuto online-server
 
 PYTHON = .venv/bin/python
 
 install:
 	uv venv && uv pip install -e ".[dev]"
+
+install-online:
+	uv pip install -e ".[dev,online]"
 
 test:
 	$(PYTHON) -m pytest ur/tests/ -v
@@ -25,17 +28,9 @@ watch:
 play:
 	$(PYTHON) -m ur.play
 
-poc3:
-	$(PYTHON) -m ur.poc.play3
-
-poc3-step:
-	STEP=1 $(PYTHON) -m ur.poc.play3
-
-cross:
-	$(PYTHON) -m ur.poc.play_cross
-
-cross-step:
-	STEP=1 $(PYTHON) -m ur.poc.play_cross
+# Start the online server: make online-server [PORT=8765]
+online-server:
+	$(PYTHON) -m uvicorn ur.online.server:app --host 0.0.0.0 --port $(or $(PORT),8765) --reload
 
 # Jump straight to a tutorial step: make tuto STEP=3
 tuto:
