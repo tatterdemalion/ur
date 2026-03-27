@@ -20,6 +20,7 @@ from typing import Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from ur.game.engine import Engine, Player
 from ur.game.rules import P1_PATH, P2_PATH
@@ -34,7 +35,8 @@ from ur.storage.saves import generate_game_name
 
 app = FastAPI()
 
-_HTML = Path(__file__).parent / "web_client.html"
+_DIST = Path(__file__).parent / "dist"
+_HTML = _DIST / "index.html"
 
 _2P_PATHS = [P1_PATH, P2_PATH]
 _3P_PATHS = [P1_PATH_CROSS, P2_PATH_CROSS, P3_PATH_CROSS]
@@ -128,7 +130,11 @@ async def index():
     try:
         return HTMLResponse(_HTML.read_text())
     except FileNotFoundError:
-        return HTMLResponse("<h1>web_client.html not found</h1>", status_code=404)
+        return HTMLResponse(
+            "<h1>Frontend not built</h1>"
+            "<p>Run: <code>cd ur/online/frontend && npm install && npm run build</code></p>",
+            status_code=404,
+        )
 
 
 @app.get("/ping")
@@ -396,3 +402,9 @@ async def _run_game(room: GameRoom) -> None:
                 "board": engine.snapshot(),
                 "last_action": asdict(engine.last_action),
             })
+
+
+# ── Static assets (Vite build output) ─────────────────────────────────────────
+# Mounted last so the /ws WebSocket route takes priority.
+if (_DIST / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(_DIST / "assets")), name="assets")
