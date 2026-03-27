@@ -436,7 +436,11 @@ class TestOnlineGameFlow(_Base):
                         ws.receive_json(); ws.receive_json()
                         ws.send_json({"type": "create", "name": f"Host{n}",
                                       "color": "#d42020"})
-                        w = ws.receive_json()
+                        # skip any interleaved 'games' broadcasts from concurrent creates
+                        while True:
+                            w = ws.receive_json()
+                            if w.get("type") != "games":
+                                break
                         game_id_ref[0] = w["game_id"]
                         host_ready.set()
                         ws.receive_json()  # matched

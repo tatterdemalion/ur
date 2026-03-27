@@ -24,7 +24,7 @@ from fastapi.staticfiles import StaticFiles
 
 from ur.game.engine import Engine, Player
 from ur.game.rules import P1_PATH, P2_PATH
-from ur.poc.rules_cross import (
+from ur.game.rules_cross import (
     CROSS_ROSETTAS_3P,
     P1_PATH_CROSS,
     P2_PATH_CROSS,
