@@ -133,7 +133,11 @@ class Engine:
         """Serialize piece positions to a JSON-safe dict for network/save use."""
         result: dict = {
             "players": [
-                {"pieces": {str(p.identifier): p.progress for p in player.pieces}}
+                {
+                    "pieces": {str(p.identifier): p.progress for p in player.pieces},
+                    "score": sum(1 for p in player.pieces if p.progress == FINISH),
+                    "waiting": sum(1 for p in player.pieces if p.progress == 0),
+                }
                 for player in self.players
             ]
         }
