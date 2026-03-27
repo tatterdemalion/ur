@@ -57,8 +57,9 @@ class Player:
 
 
 class Engine:
-    def __init__(self, players: list):
+    def __init__(self, players: list, rosettas=None):
         self.players = players
+        self.rosettas = ROSETTAS if rosettas is None else rosettas
         self.current_idx = 0
         self.last_action = Action(
             player_idx=0,
@@ -111,7 +112,7 @@ class Engine:
         opponent_safe = set()
         for opp in self.opponents:
             for p in opp.pieces:
-                if p.is_available and p.coord in ROSETTAS:
+                if p.is_available and p.coord in self.rosettas:
                     opponent_safe.add(p.coord)
 
         valid_moves = []
@@ -140,7 +141,7 @@ class Engine:
 
     def execute_move(self, move: Move, roll: int):
         hit = False
-        roll_again = move.target_coord in ROSETTAS and move.target_progress < FINISH
+        roll_again = move.target_coord in self.rosettas and move.target_progress < FINISH
 
         if move.target_coord is not None:
             for opp in self.opponents:

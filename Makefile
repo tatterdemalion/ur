@@ -1,4 +1,4 @@
-.PHONY: install test lint format simulate play tutorial tuto poc3 poc3-step
+.PHONY: install test lint format simulate play tutorial tuto poc3 poc3-step cross cross-step
 
 PYTHON = .venv/bin/python
 
@@ -30,6 +30,12 @@ poc3:
 
 poc3-step:
 	STEP=1 $(PYTHON) -m ur.poc.play3
+
+cross:
+	$(PYTHON) -m ur.poc.play_cross
+
+cross-step:
+	STEP=1 $(PYTHON) -m ur.poc.play_cross
 
 # Jump straight to a tutorial step: make tuto STEP=3
 tuto:
