@@ -4,7 +4,7 @@ from typing import Optional
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
 from ur.cli.tui.constants import C_BOLD_TEXT, C_RESET, SCREEN_WIDTH
 from ur.cli.tui.i18n import set_language, t
-from ur.cli.flows.match import ClientMatch, HostMatch, LocalMatch, OnlineMatch
+from ur.cli.flows.match import LocalMatch, OnlineMatch
 from ur.online.client import DEFAULT_HOST, ONLINE_COLORS
 from ur.cli.flows.tutorial import TutorialMatch, TUTORIAL_STEPS
 from ur.cli.tui.widgets import Menu, Navigation
@@ -36,17 +36,6 @@ def _game_selection_menu(title: str, saves: list, extra_items: Optional[list] = 
 def local_game_menu() -> Optional[SaveFile]:
     saves = [s for s in list_saves() if s.mode == "local"]
     return _game_selection_menu(title=t("menu.single_player"), saves=saves)
-
-
-def multiplayer_game_menu() -> Optional[SaveFile]:
-    saves = [s for s in list_saves() if s.mode == "lan"]
-    return _game_selection_menu(
-        title=t("menu.multi_player"),
-        saves=saves,
-        extra_items=[
-            (t("menu.join"), "join_game"),
-        ]
-    )
 
 
 def select_bot_menu() -> Optional[Bot]:
@@ -143,7 +132,6 @@ def main_menu():
         subtitle = "✧ ══════════════ ✿ ══════════════ ✧"
         menu = Menu(subtitle)
         menu.add(t("menu.single_player"), "single_player")
-        menu.add(t("menu.multi_player"), "multi_player")
         menu.add(t("menu.online"), "online")
         menu.add(t("menu.tutorial"), "tutorial")
         menu.add(t("menu.language"), "language")
@@ -170,32 +158,6 @@ def main_menu():
 
             if bot:
                 LocalMatch(bot, navigation, save=save).start()
-            else:
-                main_menu()
-
-        elif choice == "multi_player":
-            choice = multiplayer_game_menu()
-            if choice == "new_game":
-                HostMatch(navigation).start()
-            elif choice == "join_game":
-                Navigation.clear()
-                out(f"{C_BOLD_TEXT}=== {t('join.title')} ==={C_RESET}\n")
-                last_ip = Session.load().get("last_ip", "")
-                prompt = (
-                    t("join.enter_ip_last", last_ip=last_ip) if last_ip else t("join.enter_ip")
-                )
-                Navigation.print_commands()
-                host_ip = input(prompt).strip()
-
-                if Navigation.check_global_commands(host_ip):
-                    continue
-
-                host_ip = host_ip or last_ip
-                if host_ip:
-                    Session.save({"last_ip": host_ip})
-                    ClientMatch(host_ip, navigation).start()
-            elif isinstance(choice, SaveFile):
-                HostMatch(navigation).load_game(choice)
             else:
                 main_menu()
 

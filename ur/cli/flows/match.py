@@ -1,4 +1,3 @@
-import socket
 import time
 from typing import Optional
 
@@ -7,12 +6,11 @@ from ur.cli.tui.board import Board
 from ur.cli.tui.constants import C_BOLD_TEXT, C_P1, C_P2, C_RESET, DEFEAT_ART, VICTORY_ART
 from ur.cli.tui.i18n import t
 from ur.cli.tui.output import out, word_wrap, center
-from ur.lan.protocol import ClientProtocol, HostProtocol
 from ur.cli.tui.utils import GameUtils
 from dataclasses import asdict
 
 from ur.game.engine import Action, Engine, Player
-from ur.lan.network import PORT, Client, Server
+from ur.online.client import ClientProtocol, OnlineSocket, ONLINE_PORT, DEFAULT_HOST
 from ur.game.rules import P1_PATH, P2_PATH
 from ur.storage.saves import (
     SaveFile,
@@ -20,7 +18,6 @@ from ur.storage.saves import (
     generate_game_name,
     save_game,
 )
-from ur.online.client import OnlineSocket, ONLINE_PORT, DEFAULT_HOST
 
 
 class Match:
@@ -121,192 +118,6 @@ class LocalMatch(Match):
             self.save_state("local")
 
         self.end_game(self.engine.winner.player_idx == self.p1.player_idx)
-
-
-class HostMatch(Match):
-    def __init__(self, navigation):
-        super().__init__(navigation)
-        self.server = Server()
-        self.save = None
-
-    def load_game(self, save: SaveFile):
-        self.save = save
-        self.game_name = self.save.game_name
-        self.start()
-
-    def start(self):
-        if not self.save:
-            self.game_name = generate_game_name()
-
-        self.server.start()
-
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            local_ip = s.getsockname()[0]
-            s.close()
-        except Exception:
-            local_ip = "127.0.0.1"
-
-        out(f"{t('host.your_ip')}{C_P1}{local_ip}{C_RESET}")
-        out(t("host.listening", port=str(PORT)))
-        out(t("host.waiting"))
-
-        try:
-            client_ip = self.server.wait_for_client()
-            self.show_message(t("host.opponent_connected", ip=client_ip), 1.0)
-
-            if self.save:
-                self.engine, self.p1, self.p2 = self.save.restore_engine()
-                self.save_path = self.save.path
-                self.server.send(
-                    {
-                        "type": "restore",
-                        "board": self.engine.snapshot(),
-                        "last_action": asdict(self.engine.last_action),
-                        "current_idx": self.engine.current_idx,
-                        "game_name": self.game_name,
-                    }
-                )
-                self.show_message(f"{C_P1}{t('host.resuming', name=self.game_name)}{C_RESET}", 1.0)
-            else:
-                self.p1 = Player(0, t("player.you"), P1_PATH)
-                self.p2 = Player(1, t("player.opponent"), P2_PATH)
-                self.engine = Engine(self.p1, self.p2)
-                self.server.send({"type": "new_game", "game_name": self.game_name})
-
-            self.ui = Board(self.engine, self.navigation, game_name=self.game_name)
-
-            def on_my_turn(valid_moves: list, roll: int):
-                self.update_display()
-                GameUtils.animate_dice(C_P1, roll)
-                return GameUtils.get_human_move(valid_moves, self.ui, roll, C_P1)
-
-            def on_state(last_action):
-                self.save_state("lan")
-                self.update_display()
-
-            def on_opponent_thinking():
-                out(center(t("match.waiting_opponent")))
-
-            def on_no_moves(roll: int):
-                self.save_state("lan")
-                self.update_display()
-                time.sleep(2.0)
-
-            def on_game_over(winner_idx: int):
-                self.end_game(winner_idx == self.p1.player_idx)
-
-            # Show the board once before the loop begins
-            self.update_display()
-
-            protocol = HostProtocol(
-                server=self.server,
-                engine=self.engine,
-                p1=self.p1,
-                p2=self.p2,
-                on_my_turn=on_my_turn,
-                on_state=on_state,
-                on_opponent_thinking=on_opponent_thinking,
-                on_no_moves=on_no_moves,
-                on_game_over=on_game_over,
-            )
-            protocol.run()
-
-        except (ConnectionError, OSError, KeyboardInterrupt):
-            self.handle_disconnect()
-
-        finally:
-            self.server.close()
-
-
-class ClientMatch(Match):
-    def __init__(self, host_ip: str, navigation):
-        super().__init__(navigation)
-        self.host_ip = host_ip
-        self.client = Client(host_ip)
-        self.p1 = Player(0, t("player.opponent"), P1_PATH)
-        self.p2 = Player(1, t("player.you"), P2_PATH)
-        self.engine = Engine(self.p1, self.p2)
-
-    def start(self):
-        self.print_header(t("join.title"))
-        out(t("match.connecting", host=self.host_ip, port=str(PORT)))
-        try:
-            self.client.connect()
-        except (ConnectionRefusedError, OSError, socket.timeout):
-            self.show_message(f"{C_P2}{t('match.failed_connect')}{C_RESET}", 2.0)
-            return
-
-        self.show_message(t("match.connected"), 1.0)
-
-        try:
-            init = self.client.recv()
-            self.game_name = init.get("game_name", "")
-            self.ui = Board(
-                self.engine, self.navigation, local_player=self.p2, game_name=self.game_name
-            )
-
-            if init["type"] == "restore":
-                self.engine.restore(init["board"])
-                self.engine.last_action = Action(**init["last_action"])
-                self.engine.current_idx = init["current_idx"]
-                self.update_display()
-                self.show_message(f"\n{C_P1}{t('host.resuming', name=self.game_name)}{C_RESET}", 1.0)
-
-            def on_rolling(board: dict, roll: int, last_action: dict):
-                self.engine.restore(board)
-                self.engine.last_action = Action(**last_action)
-                self.update_display()
-                GameUtils.animate_dice(C_P2, roll)
-                out(center(t("match.waiting_opponent")))
-
-            def on_state(board: dict, last_action: dict):
-                self.engine.restore(board)
-                self.engine.last_action = Action(**last_action)
-                self.update_display()
-                time.sleep(1.2)
-
-            def on_no_moves(board: dict, last_action: dict):
-                self.engine.restore(board)
-                self.engine.last_action = Action(**last_action)
-                self.update_display()
-                time.sleep(1.2)
-
-            def on_your_turn(board: dict, roll: int, valid_move_ids: list, last_action: dict):
-                self.engine.restore(board)
-                self.engine.last_action = Action(**last_action)
-                self.engine.current_idx = 1  # client is always p2
-                valid_moves = self.engine.get_valid_moves(roll)
-                valid_moves = [m for m in valid_moves if m.piece.identifier in set(valid_move_ids)]
-                self.update_display()
-                GameUtils.animate_dice(C_P1, roll)
-                chosen_move = GameUtils.get_human_move(valid_moves, self.ui, roll, C_P1)
-                if chosen_move is None:
-                    return None
-                return chosen_move.piece.identifier
-
-            def on_game_over(board: dict, winner_idx: int, last_action: dict):
-                self.engine.restore(board)
-                self.engine.last_action = Action(**last_action)
-                self.end_game(winner_idx == self.p2.player_idx)
-
-            protocol = ClientProtocol(
-                client=self.client,
-                engine=self.engine,
-                on_rolling=on_rolling,
-                on_state=on_state,
-                on_no_moves=on_no_moves,
-                on_your_turn=on_your_turn,
-                on_game_over=on_game_over,
-            )
-            protocol.run()
-
-        except (ConnectionRefusedError, OSError, socket.timeout):
-            self.handle_disconnect()
-
-        finally:
-            self.client.close()
 
 
 class OnlineMatch(Match):
@@ -456,7 +267,7 @@ class OnlineMatch(Match):
             )
             protocol.run()
 
-        except (ConnectionError, OSError, socket.timeout, KeyboardInterrupt):
+        except (ConnectionError, OSError, KeyboardInterrupt):
             self.handle_disconnect()
         except Exception:
             self.handle_disconnect()

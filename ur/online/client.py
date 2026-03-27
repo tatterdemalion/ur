@@ -1,11 +1,12 @@
 """
-Synchronous WebSocket client for the CLI online match.
+Synchronous WebSocket client and message protocol for the CLI online match.
 
 Requires:  pip install "websockets>=12"
 """
 from __future__ import annotations
 
 import json
+from typing import Callable, Optional
 
 import websockets.sync.client as _ws_sync
 
@@ -50,3 +51,56 @@ class OnlineSocket:
                 self._conn.close()
             except Exception:
                 pass
+
+
+class ClientProtocol:
+    """
+    Drives one complete game as the client side.
+
+    Accepts any object with .send() / .recv() so it works with both
+    OnlineSocket (WebSocket) and future transports.
+    """
+
+    def __init__(
+        self,
+        client,
+        engine,
+        on_rolling: Callable[[dict, int, dict], None],
+        on_state: Callable[[dict, dict], None],
+        on_no_moves: Callable[[dict, dict], None],
+        on_your_turn: Callable[[dict, int, list, dict], Optional[int]],
+        on_game_over: Callable[[dict, int, dict], None],
+    ):
+        self.client = client
+        self.engine = engine
+        self.on_rolling = on_rolling
+        self.on_state = on_state
+        self.on_no_moves = on_no_moves
+        self.on_your_turn = on_your_turn
+        self.on_game_over = on_game_over
+
+    def run(self) -> bool:
+        while True:
+            msg = self.client.recv()
+            msg_type = msg["type"]
+
+            if msg_type == "rolling":
+                self.on_rolling(msg["board"], msg["roll"], msg["last_action"])
+
+            elif msg_type == "state":
+                self.on_state(msg["board"], msg["last_action"])
+
+            elif msg_type == "no_moves":
+                self.on_no_moves(msg["board"], msg["last_action"])
+
+            elif msg_type == "your_turn":
+                piece_id = self.on_your_turn(
+                    msg["board"], msg["roll"], msg["valid_moves"], msg["last_action"]
+                )
+                if piece_id is None:
+                    return False
+                self.client.send({"type": "move", "piece_id": piece_id})
+
+            elif msg_type == "game_over":
+                self.on_game_over(msg["board"], msg["winner_idx"], msg["last_action"])
+                return True

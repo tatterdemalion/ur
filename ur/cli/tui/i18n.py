@@ -59,14 +59,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Single Player",
         "tr": "Tek Oyuncu",
     },
-    "menu.multi_player": {
-        "en": "Multi Player",
-        "tr": "Çok Oyuncu",
-    },
-    "menu.join": {
-        "en": "Join Game",
-        "tr": "Oyuna Katıl",
-    },
 "menu.online": {
         "en": "Play Online",
         "tr": "Online Oyna",
@@ -113,48 +105,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "No local saves found.",
         "tr": "Yerel kayıt bulunamadı.",
     },
-    # ── Join game ─────────────────────────────────────────────────────────
-    "join.title": {
-        "en": "JOIN GAME",
-        "tr": "OYUNA KATIL",
-    },
-    "join.enter_ip": {
-        "en": "Enter host IP address: ",
-        "tr": "Sunucu IP adresini girin: ",
-    },
-    "join.enter_ip_last": {
-        "en": "Enter host IP address [{last_ip}]: ",
-        "tr": "Sunucu IP adresini girin [{last_ip}]: ",
-    },
-    # ── Host game ─────────────────────────────────────────────────────────
-    "host.title": {
-        "en": "HOST GAME",
-        "tr": "OYUN KUR",
-    },
-    "host.game_name_label": {
-        "en": "Game name: ",
-        "tr": "Oyun adı: ",
-    },
-    "host.your_ip": {
-        "en": "\nYour IP address : ",
-        "tr": "\nIP adresin: ",
-    },
-    "host.listening": {
-        "en": "Listening on port {port}...",
-        "tr": "{port} portunda dinleniyor...",
-    },
-    "host.waiting": {
-        "en": "Waiting for opponent to connect...\n",
-        "tr": "Rakip bekleniyor...\n",
-    },
-    "host.opponent_connected": {
-        "en": "Opponent connected from {ip}!\n",
-        "tr": "{ip} adresinden rakip bağlandı!\n",
-    },
-    "host.resuming": {
-        "en": "Resuming '{name}'...",
-        "tr": "'{name}' devam ettiriliyor...",
-    },
     # ── Match / in-game ───────────────────────────────────────────────────
     "match.no_valid_moves": {
         "en": "No valid moves. Turn skipped.",
@@ -172,17 +122,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "\nPress Enter to return to the main menu: ",
         "tr": "\nAna menüye dönmek için Enter'a bas: ",
     },
-    "match.connecting": {
-        "en": "Connecting to {host}:{port}...",
-        "tr": "{host}:{port} adresine bağlanılıyor...",
-    },
     "match.failed_connect": {
         "en": "Failed to connect to host.",
         "tr": "Sunucuya bağlanılamadı.",
-    },
-    "match.connected": {
-        "en": "Connected!\n",
-        "tr": "Bağlandı!\n",
     },
     "match.opponent_turn_anim": {
         "en": "Opponent's turn.",
