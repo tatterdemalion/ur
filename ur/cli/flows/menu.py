@@ -4,7 +4,8 @@ from typing import Optional
 from ur.ai.bots import Bot, GreedyBot, RandomBot, StrategicBot
 from ur.cli.tui.constants import C_BOLD_TEXT, C_RESET, SCREEN_WIDTH
 from ur.cli.tui.i18n import set_language, t
-from ur.cli.flows.match import ClientMatch, HostMatch, LocalMatch
+from ur.cli.flows.match import LocalMatch, OnlineMatch
+from ur.online.client import DEFAULT_HOST, ONLINE_COLORS
 from ur.cli.flows.tutorial import TutorialMatch, TUTORIAL_STEPS
 from ur.cli.tui.widgets import Menu, Navigation
 from ur.cli.tui.output import out
@@ -35,15 +36,6 @@ def _game_selection_menu(title: str, saves: list, extra_items: Optional[list] = 
 def local_game_menu() -> Optional[SaveFile]:
     saves = [s for s in list_saves() if s.mode == "local"]
     return _game_selection_menu(title=t("menu.single_player"), saves=saves)
-
-
-def multiplayer_game_menu() -> Optional[SaveFile]:
-    saves = [s for s in list_saves() if s.mode == "lan"]
-    return _game_selection_menu(
-        title=t("menu.multi_player"),
-        saves=saves,
-        extra_items=[(t("menu.join"), "join_game")]
-    )
 
 
 def select_bot_menu() -> Optional[Bot]:
@@ -86,6 +78,53 @@ def language_menu():
         Session.save({"language": choice})
 
 
+def online_menu(navigation):
+    """Prompt for name + color, then connect and enter online lobby."""
+    session = Session.load()
+
+    # ── Name ─────────────────────────────────────────────────────────────────
+    Navigation.clear()
+    out(f"{C_BOLD_TEXT}=== {t('online.title')} ==={C_RESET}\n")
+    default_name = session.get("online_name", "")
+    prompt = t("online.enter_name_last", name=default_name) if default_name else t("online.enter_name")
+    Navigation.print_commands()
+    name = input(prompt).strip()
+    if Navigation.check_global_commands(name):
+        return
+    name = name or default_name or "Player"
+
+    # ── Color ─────────────────────────────────────────────────────────────────
+    color_menu = Menu(t("online.color_title"))
+    for color_name, ansi_code, _ in ONLINE_COLORS:
+        color_menu.add(f"{ansi_code}●{C_RESET}  {color_name}", color_name)
+    color_menu.add(t("menu.back"), None)
+
+    color_choice = color_menu.prompt()
+    if color_choice is None:
+        return
+
+    _, ansi_color, hex_color = next(c for c in ONLINE_COLORS if c[0] == color_choice)
+
+    # ── Server ────────────────────────────────────────────────────────────────
+    last_host = session.get("last_online_host", DEFAULT_HOST)
+    Navigation.clear()
+    out(f"{C_BOLD_TEXT}=== {t('online.title')} ==={C_RESET}\n")
+    prompt = (
+        t("online.enter_host_last", host=last_host) if last_host != DEFAULT_HOST
+        else t("online.enter_host")
+    )
+    Navigation.print_commands()
+    host = input(prompt).strip()
+    if Navigation.check_global_commands(host):
+        return
+    host = host or last_host
+
+    # Save preferences
+    Session.save({"online_name": name, "last_online_host": host})
+
+    OnlineMatch(host, navigation, name=name, hex_color=hex_color, ansi_color=ansi_color).start()
+
+
 def main_menu():
     navigation = Navigation()
 
@@ -93,7 +132,7 @@ def main_menu():
         subtitle = "✧ ══════════════ ✿ ══════════════ ✧"
         menu = Menu(subtitle)
         menu.add(t("menu.single_player"), "single_player")
-        menu.add(t("menu.multi_player"), "multi_player")
+        menu.add(t("menu.online"), "online")
         menu.add(t("menu.tutorial"), "tutorial")
         menu.add(t("menu.language"), "language")
         menu.add(t("menu.quit"), "quit")
@@ -122,33 +161,8 @@ def main_menu():
             else:
                 main_menu()
 
-        elif choice == "multi_player":
-            match = HostMatch(navigation)
-            choice = multiplayer_game_menu()
-            if choice == "new_game":
-                match.start()
-            elif choice == "join_game":
-                Navigation.clear()
-                out(f"{C_BOLD_TEXT}=== {t('join.title')} ==={C_RESET}\n")
-                last_ip = Session.load().get("last_ip", "")
-                prompt = (
-                    t("join.enter_ip_last", last_ip=last_ip) if last_ip else t("join.enter_ip")
-                )
-                Navigation.print_commands()
-                host_ip = input(prompt).strip()
-
-                if Navigation.check_global_commands(host_ip):
-                    continue
-
-                host_ip = host_ip or last_ip
-                if host_ip:
-                    Session.save({"last_ip": host_ip})
-                    ClientMatch(host_ip, navigation).start()
-            elif isinstance(choice, SaveFile):
-                save = choice
-                match.load_game(save)
-            else:
-                main_menu()
+        elif choice == "online":
+            online_menu(navigation)
 
         elif choice == "tutorial":
             tutorial_menu(navigation)

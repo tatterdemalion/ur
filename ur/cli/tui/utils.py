@@ -39,7 +39,7 @@ class GameUtils:
         out(center(f"[{player_color}{final_str}{C_RESET}]"), end="\n\n")
 
     @staticmethod
-    def build_move_hints(move: Move, p2: Player, bot_name: str) -> str:
+    def build_move_hints(move: Move, p2: Optional[Player], bot_name: str) -> str:
         hints = []
 
         if move.target_progress == FINISH:
@@ -47,7 +47,7 @@ class GameUtils:
         elif move.target_coord in ROSETTAS:
             hints.append(f"{C_ROSETTA}{t('move.lands_rosetta')}{C_RESET}")
 
-        if move.target_coord is not None:
+        if move.target_coord is not None and p2 is not None:
             for opp_piece in p2.pieces:
                 if opp_piece.is_available and opp_piece.coord == move.target_coord:
                     hints.append(f"{C_P2}{t('move.captures', name=bot_name)}{C_RESET}")
@@ -55,7 +55,7 @@ class GameUtils:
         return f" — {' '.join(hints)}" if hints else ""
 
     @classmethod
-    def _build_move_groups(cls, valid_moves: list[Move], p2: Player, bot_name: str):
+    def _build_move_groups(cls, valid_moves: list[Move], p2: Optional[Player], bot_name: str):
         rosetta_keys = {4: "move.rosetta_first", 8: "move.rosetta_middle", 14: "move.rosetta_last"}
         groups = {}
         for move in valid_moves:
@@ -97,8 +97,8 @@ class GameUtils:
         player_color: str
     ) -> Optional[Move]:
 
-        p2 = ui._top
-        bot_name = p2.name
+        p2 = getattr(ui, "_top", None)
+        bot_name = p2.name if p2 is not None else ""
         navigation = ui.navigation
 
         valid_moves.sort(key=lambda m: m.piece.progress, reverse=True)
@@ -107,7 +107,8 @@ class GameUtils:
         is_single_choice = len(groups) == 1
         default_move = min(valid_moves, key=lambda m: m.piece.identifier)
 
-        prompt_text = f"{t('move.select_prompt')} {C_P1}{NUM_CIRCLES[1]}{C_RESET} ....{C_P1}{NUM_CIRCLES[7]}{C_RESET} "
+        piece_count = len(ui.engine.current_player.pieces)
+        prompt_text = f"{t('move.select_prompt')} {C_P1}{NUM_CIRCLES[1]}{C_RESET} ....{C_P1}{NUM_CIRCLES[piece_count]}{C_RESET} "
         if is_single_choice:
             prompt_text += t("move.select_prompt_default", id=str(default_move.piece.identifier))
         else:
