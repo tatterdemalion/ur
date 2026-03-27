@@ -6,10 +6,10 @@ from ur.game.rules import FINISH, ROSETTAS
 
 
 class ActionType:
-    STARTED:str = "started"
-    SKIPPED:str = "skipped"
-    MOVED:str = "moved"
-    SCORED:str = "scored"
+    STARTED: str = "started"
+    SKIPPED: str = "skipped"
+    MOVED: str = "moved"
+    SCORED: str = "scored"
 
 
 @dataclass
@@ -54,21 +54,31 @@ class Move:
 
 
 class Player:
-    def __init__(self, player_idx: int, name: str, path: dict):
+    def __init__(self, player_idx: int, name: str, path: dict, piece_count: int = 7):
         self.player_idx = player_idx
         self.name = name
         self.path = path
-        self.pieces = [Piece(i, self) for i in range(1, 8)]
+        self.pieces = [Piece(i, self) for i in range(1, piece_count + 1)]
 
     def has_won(self) -> bool:
         return all(piece.progress == FINISH for piece in self.pieces)
 
 
 class Engine:
-    def __init__(self, p1: Player, p2: Player):
-        self.p1 = p1
-        self.p2 = p2
-        self.players = [p1, p2]
+    def __init__(self, *args, rosettas=None):
+        """
+        Accepts either:
+          Engine(p1, p2)              — 2-player (backward compatible)
+          Engine(p1, p2, p3)          — 3-player
+          Engine([p1, p2, p3], ...)   — list form
+        """
+        if len(args) == 1 and isinstance(args[0], list):
+            players = args[0]
+        else:
+            players = list(args)
+
+        self.players = players
+        self.rosettas = ROSETTAS if rosettas is None else rosettas
         self.current_idx = 0
         self.last_action = Action(
             player_idx=0,
@@ -80,17 +90,35 @@ class Engine:
             target_progress=None,
         )
 
+    # ── Backward-compat 2-player properties ──────────────────────────────────
+
+    @property
+    def p1(self) -> Player:
+        return self.players[0]
+
+    @property
+    def p2(self) -> Player:
+        return self.players[1]
+
     @property
     def opponent_idx(self) -> int:
+        """2-player compat: index of the single opponent."""
         return self.current_idx ^ 1
+
+    @property
+    def opponent(self) -> Player:
+        """2-player compat: the single opponent player."""
+        return self.players[self.opponent_idx]
+
+    # ── N-player properties ───────────────────────────────────────────────────
+
+    @property
+    def opponents(self) -> list:
+        return [p for i, p in enumerate(self.players) if i != self.current_idx]
 
     @property
     def current_player(self) -> Player:
         return self.players[self.current_idx]
-
-    @property
-    def opponent(self) -> Player:
-        return self.players[self.opponent_idx]
 
     @property
     def winner(self) -> Optional[Player]:
@@ -99,26 +127,41 @@ class Engine:
                 return player
         return None
 
+    # ── Serialization ─────────────────────────────────────────────────────────
+
     def snapshot(self) -> dict:
         """Serialize piece positions to a JSON-safe dict for network/save use."""
-        stats = self.get_stats()
-        return {
-            "p1_pieces": {str(p.identifier): p.progress for p in self.p1.pieces},
-            "p2_pieces": {str(p.identifier): p.progress for p in self.p2.pieces},
-            "stats": {
-                "p1_score": stats.p1_score,
-                "p1_waiting": stats.p1_waiting,
-                "p2_score": stats.p2_score,
-                "p2_waiting": stats.p2_waiting,
-            },
+        result: dict = {
+            "players": [
+                {"pieces": {str(p.identifier): p.progress for p in player.pieces}}
+                for player in self.players
+            ]
         }
+        # Backward-compat keys so existing saves/tests keep working
+        result["p1_pieces"] = result["players"][0]["pieces"]
+        result["p2_pieces"] = result["players"][1]["pieces"]
+        stats = self.get_stats()
+        result["stats"] = {
+            "p1_score": stats.p1_score,
+            "p1_waiting": stats.p1_waiting,
+            "p2_score": stats.p2_score,
+            "p2_waiting": stats.p2_waiting,
+        }
+        return result
 
     def restore(self, board: dict):
         """Apply a snapshot dict back onto this engine's piece positions."""
-        for piece in self.p1.pieces:
-            piece.progress = board["p1_pieces"][str(piece.identifier)]
-        for piece in self.p2.pieces:
-            piece.progress = board["p2_pieces"][str(piece.identifier)]
+        if "players" in board:
+            for i, player_data in enumerate(board["players"]):
+                if i < len(self.players):
+                    for piece in self.players[i].pieces:
+                        piece.progress = player_data["pieces"][str(piece.identifier)]
+        else:
+            # Legacy 2-player format
+            for piece in self.players[0].pieces:
+                piece.progress = board["p1_pieces"][str(piece.identifier)]
+            for piece in self.players[1].pieces:
+                piece.progress = board["p2_pieces"][str(piece.identifier)]
 
     def get_stats(self) -> Stats:
         return Stats(
@@ -127,6 +170,8 @@ class Engine:
             p2_score=sum(1 for p in self.p2.pieces if p.progress == FINISH),
             p2_waiting=sum(1 for p in self.p2.pieces if p.progress == 0),
         )
+
+    # ── Turn management ───────────────────────────────────────────────────────
 
     def skip_turn(self, roll: int):
         self.last_action = Action(
@@ -140,41 +185,40 @@ class Engine:
         self.switch_player()
 
     def switch_player(self) -> Player:
-        self.current_idx = self.opponent_idx
+        self.current_idx = (self.current_idx + 1) % len(self.players)
         return self.current_player
 
     def roll_dice(self) -> int:
         return sum(random.getrandbits(1) for _ in range(4))
 
-    def get_valid_moves(self, roll: int) -> list[Move]:
+    # ── Move logic ────────────────────────────────────────────────────────────
+
+    def get_valid_moves(self, roll: int) -> list:
         if roll == 0:
             return []
 
         current_occupied = {p.progress for p in self.current_player.pieces if p.progress < FINISH}
-        opponent_safe = {
-            p.coord for p in self.opponent.pieces if p.is_available and p.coord in ROSETTAS
-        }
+        opponent_safe = set()
+        for opp in self.opponents:
+            for p in opp.pieces:
+                if p.is_available and p.coord in self.rosettas:
+                    opponent_safe.add(p.coord)
 
         valid_moves = []
-
         for piece in self.current_player.pieces:
-            # Rule A: Piece is already done
             if not piece.is_available:
                 continue
 
             target_progress = piece.progress + roll
 
-            # Rule B: Needs exact roll to score
             if target_progress > FINISH:
                 continue
 
-            # Rule C: Cannot land on your own piece
             if target_progress in current_occupied:
                 continue
 
             target_coord = self.current_player.path.get(target_progress)
 
-            # Rule D: Cannot hit an opponent on a Rosetta
             if target_coord in opponent_safe:
                 continue
 
@@ -186,14 +230,16 @@ class Engine:
 
     def execute_move(self, move: Move, roll: int):
         hit = False
-        roll_again = move.target_coord in ROSETTAS and move.target_progress < FINISH
+        roll_again = move.target_coord in self.rosettas and move.target_progress < FINISH
 
-        # Check for hit
         if move.target_coord is not None:
-            for opp_piece in self.opponent.pieces:
-                if opp_piece.coord == move.target_coord and opp_piece.is_available:
-                    opp_piece.progress = 0
-                    hit = True
+            for opp in self.opponents:
+                for opp_piece in opp.pieces:
+                    if opp_piece.coord == move.target_coord and opp_piece.is_available:
+                        opp_piece.progress = 0
+                        hit = True
+                        break
+                if hit:
                     break
 
         move.piece.progress = move.target_progress
